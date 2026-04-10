@@ -1,0 +1,23 @@
+{
+  // ND30 Formatter — Cloudflare Pages Configuration
+  // Deploy: npx wrangler pages deploy dist
+  "$schema": "https://json.schemastore.org/wrangler",
+  "name": "nd30-formatter",
+  "compatibility_date": "2024-12-01",
+  "pages_build_output_dir": "dist",
+
+  // Vars (non-sensitive — sensitive keys go via `wrangler secret`)
+  "vars": {
+    "GEMINI_MODEL": "gemini-2.5-flash-preview-04-17"
+  }
+
+  // Secrets (set via CLI, NOT in this file):
+  // npx wrangler pages secret put GEMINI_API_KEY
+  //
+  // D1 Database (uncomment khi cần rate limiting):
+  // "d1_databases": [{
+  //   "binding": "DB",
+  //   "database_name": "nd30-jobs",
+  //   "database_id": "xxx"
+  // }]
+}
