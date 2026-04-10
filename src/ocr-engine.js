@@ -63,7 +63,7 @@ export async function ocrPdfPages(pdfBuffer, onProgress) {
   // Lazy import pdfjs
   const pdfjsLib = await import('pdfjs-dist');
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) }).promise;
   const totalPages = doc.numPages;

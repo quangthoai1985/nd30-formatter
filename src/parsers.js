@@ -34,7 +34,7 @@ export async function parsePdf(arrayBuffer) {
     const pdfjsLib = await import('pdfjs-dist');
 
     // Set worker source
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
     const pages = [];
