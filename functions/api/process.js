@@ -144,6 +144,20 @@ export async function onRequestPost(context) {
         );
       }
 
+      // Gemini model overloaded (503) or proxy error (502)
+      if (proxyResponse.status === 502 || proxyResponse.status === 503) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Model AI đang quá tải. Vui lòng thử lại sau vài giây.',
+            detail: errData.detail || '',
+            model: errData.model || '',
+            code: 'MODEL_OVERLOADED',
+          }),
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
       return new Response(
         JSON.stringify({
           success: false,
