@@ -4,9 +4,8 @@
  * CPU time: ~2-5ms (chỉ làm I/O, không parse file)
  */
 
-// Gemini API constants
-const GEMINI_MODEL = 'gemini-2.5-flash-preview-04-17';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+// Gemini API base URL (model is read from env at runtime)
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 // System prompt cho phân tích văn bản hành chính
 const ND30_SYSTEM_PROMPT = `
@@ -121,8 +120,12 @@ export async function onRequestPost(context) {
       };
     }
 
+    // Resolve model from env (set in wrangler.jsonc or Dashboard)
+    const model = env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const apiUrl = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
+
     // Call Gemini API
-    const geminiResponse = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const geminiResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(geminiBody),
