@@ -1057,6 +1057,188 @@ body {
 }
 
 
+/* ═══════════════════ REVIEW FORM ═══════════════════ */
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 720px;
+}
+
+.form-section {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+}
+
+.form-section-title {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--outline-variant);
+  letter-spacing: -0.01em;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.form-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.form-grid-4 {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.form-grid .span-2 {
+  grid-column: span 2;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.form-group + .form-grid,
+.form-grid + .form-grid {
+  margin-top: var(--space-md);
+}
+
+.form-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface-container-low);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  transition: all var(--duration-fast);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 91, 191, 0.1);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--outline);
+}
+
+.form-group select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23727785' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  line-height: 1.6;
+  min-height: 60px;
+}
+
+/* ── Nội dung Preview ── */
+.noi-dung-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--space-md);
+  max-height: 240px;
+  overflow-y: auto;
+  padding: var(--space-md);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--outline-variant);
+}
+
+.noi-dung-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.noi-dung-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.badge-dieu {
+  background: var(--primary-fixed);
+  color: var(--primary);
+}
+
+.badge-khoan {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+.badge-diem {
+  background: var(--tertiary-fixed);
+  color: var(--tertiary);
+}
+
+.badge-muc {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.badge-doan {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+}
+
+.noi-dung-text {
+  color: var(--on-surface-variant);
+}
+
+.preview-empty {
+  color: var(--outline);
+  font-size: 0.8125rem;
+  font-style: italic;
+  padding: var(--space-sm);
+}
+
+/* ── Review Actions ── */
+.review-actions {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  padding-top: var(--space-md);
+}
+
+
 /* ═══════════════════ UTILITIES ═══════════════════ */
 .hidden { display: none !important; }
 
@@ -1112,6 +1294,27 @@ body {
 
   .result-actions .btn-primary,
   .result-actions .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .form-grid,
+  .form-grid-3,
+  .form-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .span-2 {
+    grid-column: span 1;
+  }
+
+  .review-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .review-actions .btn-primary,
+  .review-actions .btn-secondary {
     width: 100%;
     justify-content: center;
   }

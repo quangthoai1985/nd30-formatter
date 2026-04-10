@@ -67,7 +67,7 @@
     <!-- ═══ VIEW: HOME ═══ -->
     <section id="view-home" class="view active">
       <div class="hero">
-        <div class="hero-badge">AI-Powered Document Automation</div>
+        <div class="hero-badge">Offline-First • Zero-Cost</div>
         <h1 class="hero-title">Chuẩn hóa<br/><span class="gradient-text">Văn bản Hành chính</span></h1>
         <p class="hero-desc">Tự động chuyển đổi văn bản sang định dạng chuẩn Nghị định 30/2020/NĐ-CP.<br/>Hỗ trợ DOCX, PDF, ảnh (OCR) và nhập văn bản trực tiếp.</p>
       </div>
@@ -193,16 +193,182 @@
             <div class="step-dot"></div>
             <span>Đọc nội dung</span>
           </div>
-          <div id="step-ai" class="step-item">
+          <div id="step-ocr" class="step-item" style="display:none">
             <div class="step-dot"></div>
-            <span>AI phân tích thể thức</span>
+            <span>OCR tiếng Việt (Tesseract)</span>
           </div>
-          <div id="step-generate" class="step-item">
+          <div id="step-analyze" class="step-item">
             <div class="step-dot"></div>
-            <span>Tạo file DOCX</span>
+            <span>Phân tích cấu trúc</span>
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- ═══ VIEW: REVIEW ═══ -->
+    <section id="view-review" class="view">
+      <div class="view-header">
+        <h2>Kiểm tra & Chỉnh sửa</h2>
+        <p class="view-subtitle">Kiểm tra kết quả phân tích trước khi tạo file DOCX</p>
+      </div>
+
+      <form id="review-form" class="review-form" onsubmit="return false">
+        <!-- === Thông tin chung === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Thông tin chung</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="review-loai-vb">Loại văn bản</label>
+              <select id="review-loai-vb">
+                <option value="">— Chọn —</option>
+                <option value="QD">Quyết định</option>
+                <option value="NQ">Nghị quyết</option>
+                <option value="CV">Công văn</option>
+                <option value="TB">Thông báo</option>
+                <option value="TTR">Tờ trình</option>
+                <option value="BC">Báo cáo</option>
+                <option value="KH">Kế hoạch</option>
+                <option value="CT">Chỉ thị</option>
+                <option value="HD">Hướng dẫn</option>
+                <option value="BB">Biên bản</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="review-ten-loai">Tên loại VB (IN HOA)</label>
+              <input type="text" id="review-ten-loai" placeholder="VD: QUYẾT ĐỊNH" />
+            </div>
+          </div>
+        </div>
+
+        <!-- === Cơ quan ban hành === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Cơ quan ban hành</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="review-cq-chu-quan">Cơ quan chủ quản</label>
+              <input type="text" id="review-cq-chu-quan" placeholder="VD: UBND TỈNH AN GIANG" />
+            </div>
+            <div class="form-group">
+              <label for="review-cq-ban-hanh">Cơ quan ban hành</label>
+              <input type="text" id="review-cq-ban-hanh" placeholder="VD: SỞ TÀI CHÍNH" />
+            </div>
+          </div>
+        </div>
+
+        <!-- === Số ký hiệu + Ngày === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Số, ký hiệu & Ngày tháng</h3>
+          <div class="form-grid form-grid-4">
+            <div class="form-group">
+              <label for="review-so">Số</label>
+              <input type="text" id="review-so" placeholder="05" />
+            </div>
+            <div class="form-group">
+              <label for="review-ky-hieu">Ký hiệu</label>
+              <input type="text" id="review-ky-hieu" placeholder="QĐ-UBND" />
+            </div>
+            <div class="form-group span-2">
+              <label for="review-dia-danh">Địa danh</label>
+              <input type="text" id="review-dia-danh" placeholder="Hà Nội" />
+            </div>
+          </div>
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label for="review-ngay">Ngày</label>
+              <input type="text" id="review-ngay" placeholder="05" />
+            </div>
+            <div class="form-group">
+              <label for="review-thang">Tháng</label>
+              <input type="text" id="review-thang" placeholder="03" />
+            </div>
+            <div class="form-group">
+              <label for="review-nam">Năm</label>
+              <input type="text" id="review-nam" placeholder="2024" />
+            </div>
+          </div>
+        </div>
+
+        <!-- === Trích yếu === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Trích yếu</h3>
+          <div class="form-group">
+            <textarea id="review-trich-yeu" rows="2" placeholder="Về việc..."></textarea>
+          </div>
+        </div>
+
+        <!-- === Căn cứ === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Căn cứ ban hành</h3>
+          <div class="form-group">
+            <textarea id="review-can-cu" rows="4" placeholder="Mỗi dòng = 1 căn cứ&#10;VD: Căn cứ Luật Tổ chức chính quyền địa phương..."></textarea>
+          </div>
+        </div>
+
+        <!-- === Kính gửi === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Kính gửi</h3>
+          <div class="form-group">
+            <textarea id="review-kinh-gui" rows="3" placeholder="Mỗi dòng = 1 nơi kính gửi"></textarea>
+          </div>
+        </div>
+
+        <!-- === Nội dung === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Nội dung văn bản</h3>
+          <div id="review-noi-dung-preview" class="noi-dung-preview"></div>
+          <div class="form-group">
+            <label for="review-noi-dung-raw">Chỉnh sửa nội dung (mỗi dòng = 1 mục)</label>
+            <textarea id="review-noi-dung-raw" rows="10" placeholder="Điều 1. ...&#10;1. Nội dung khoản&#10;a) Chi tiết điểm"></textarea>
+          </div>
+        </div>
+
+        <!-- === Ký tên === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Ký tên</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="review-quyen-han">Quyền hạn ký</label>
+              <input type="text" id="review-quyen-han" placeholder="VD: TM. ỦY BAN NHÂN DÂN" />
+            </div>
+            <div class="form-group">
+              <label for="review-chuc-vu">Chức vụ người ký</label>
+              <input type="text" id="review-chuc-vu" placeholder="VD: CHỦ TỊCH" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="review-ho-ten">Họ tên người ký</label>
+            <input type="text" id="review-ho-ten" placeholder="VD: Nguyễn Văn A" />
+          </div>
+        </div>
+
+        <!-- === Nơi nhận === -->
+        <div class="form-section">
+          <h3 class="form-section-title">Nơi nhận</h3>
+          <div class="form-group">
+            <textarea id="review-noi-nhan" rows="4" placeholder="Mỗi dòng = 1 nơi nhận&#10;VD: Như Điều 2;&#10;UBND tỉnh (b/c);&#10;Lưu: VT."></textarea>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="review-actions">
+          <button type="button" id="btn-create-docx" class="btn-primary btn-download">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span>Tạo file DOCX</span>
+          </button>
+          <button type="button" id="btn-back-input" class="btn-secondary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"/>
+              <path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+            </svg>
+            <span>Quay lại</span>
+          </button>
+        </div>
+      </form>
     </section>
 
     <!-- ═══ VIEW: RESULT ═══ -->

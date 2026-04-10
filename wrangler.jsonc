@@ -1,33 +1,8 @@
 {
   // ND30 Formatter — Cloudflare Pages Configuration
+  // Static site only (no backend/functions needed)
   "$schema": "https://json.schemastore.org/wrangler",
   "name": "nd30-formatter",
   "compatibility_date": "2024-12-01",
-  "pages_build_output_dir": "dist",
-
-  // Non-sensitive environment variables
-  "vars": {
-    "GEMINI_PROXY_URL": "https://nd30-gemini-proxy-76moctsliq-uc.a.run.app"
-  },
-
-  // D1 Database (rate limiting & job tracking)
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "nd30-jobs",
-      "database_id": "8edd47d8-b2f4-4587-81b2-8b4f5ec49d02"
-    }
-  ],
-
-  // R2 Storage (temporary file uploads)
-  "r2_buckets": [
-    {
-      "bucket_name": "nd30-uploads",
-      "binding": "BUCKET"
-    }
-  ]
-
-  // Secrets (set via Cloudflare Dashboard or CLI):
-  // PROXY_SHARED_SECRET — shared secret to authenticate with Cloud Run proxy
-  // npx wrangler pages secret put PROXY_SHARED_SECRET
+  "pages_build_output_dir": "dist"
 }

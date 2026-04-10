@@ -9,18 +9,12 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('node_modules/docx')) return 'docx';
           if (id.includes('node_modules/mammoth')) return 'mammoth';
+          if (id.includes('node_modules/tesseract')) return 'tesseract';
         },
       },
     },
   },
   server: {
     port: 5173,
-    proxy: {
-      // Proxy API calls to Wrangler dev server during local dev
-      '/api': {
-        target: 'http://localhost:8788',
-        changeOrigin: true,
-      },
-    },
   },
 });
