@@ -5,6 +5,7 @@
  */
 
 // Gemini API base URL (model is read from env at runtime)
+// Using v1 endpoint for broader region support
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 // System prompt cho phân tích văn bản hành chính
@@ -146,7 +147,7 @@ export async function onRequestPost(context) {
         JSON.stringify({
           success: false,
           error: `Lỗi Gemini API: ${geminiResponse.status}`,
-          detail: errText.substring(0, 500),
+          detail: errText.substring(0, 2000),
           model: model,
           code: 'GEMINI_ERROR',
         }),
