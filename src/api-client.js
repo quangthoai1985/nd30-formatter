@@ -18,6 +18,7 @@ export async function processDocument(payload) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
+    console.error('API Error Detail:', error);
     throw new Error(error.error || `Lỗi server: ${response.status}`);
   }
 

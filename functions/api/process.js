@@ -143,7 +143,13 @@ export async function onRequestPost(context) {
       }
 
       return new Response(
-        JSON.stringify({ success: false, error: `Lỗi Gemini API: ${geminiResponse.status}`, code: 'GEMINI_ERROR' }),
+        JSON.stringify({
+          success: false,
+          error: `Lỗi Gemini API: ${geminiResponse.status}`,
+          detail: errText.substring(0, 500),
+          model: model,
+          code: 'GEMINI_ERROR',
+        }),
         { status: 502, headers: corsHeaders }
       );
     }
