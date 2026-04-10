@@ -121,7 +121,7 @@ export async function onRequestPost(context) {
     }
 
     // Resolve model from env (set in wrangler.jsonc or Dashboard)
-    const model = env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
     const apiUrl = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
 
     // Call Gemini API

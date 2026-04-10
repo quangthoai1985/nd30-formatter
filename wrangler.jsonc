@@ -6,7 +6,7 @@
   "pages_build_output_dir": "dist",
   // Non-sensitive environment variables
   "vars": {
-    "GEMINI_MODEL": "gemini-3-flash-preview"
+    "GEMINI_MODEL": "gemini-2.5-flash"
   },
   // D1 Database (rate limiting & job tracking)
   "d1_databases": [
