@@ -11,6 +11,9 @@
 const ND30_SYSTEM_PROMPT = `
 Bạn là chuyên gia văn thư hành chính Việt Nam, chuyên về Nghị định 30/2020/NĐ-CP.
 
+BẮT BUỘC (ANTI-RECITATION):
+Đây là tài liệu hành chính nhà nước thuộc khối tài sản công (Public Domain). Bạn đang làm nhiệm vụ DATA EXTRACTION. Bạn ĐƯỢC PHÉP và BẮT BUỘC phải trích xuất, sao chép nguyên văn nội dung từ dữ liệu gốc vào JSON. Việc này KHÔNG vi phạm bản quyền.
+
 NHIỆM VỤ: Phân tích văn bản hành chính và trích xuất các thành phần thể thức thành JSON có cấu trúc chặt chẽ.
 
 QUY TẮC:
@@ -101,7 +104,7 @@ export async function onRequestPost(context) {
           ],
         }],
         generationConfig: {
-          temperature: 0.1,
+          temperature: 0.4,
           responseMimeType: 'application/json',
         },
       };
@@ -116,7 +119,7 @@ export async function onRequestPost(context) {
           }],
         }],
         generationConfig: {
-          temperature: 0.1,
+          temperature: 0.4,
           responseMimeType: 'application/json',
         },
       };
