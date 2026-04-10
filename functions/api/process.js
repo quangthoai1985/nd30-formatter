@@ -1,12 +1,11 @@
 /**
  * Cloudflare Pages Function — /api/process
- * Nhận text/file → gọi Gemini → trả JSON
- * CPU time: ~2-5ms (chỉ làm I/O, không parse file)
+ * Nhận text/file → build Gemini body → forward tới Cloud Run proxy → trả JSON
+ * 
+ * Kiến trúc: Cloudflare (edge) → Cloud Run (us-central1) → Gemini API
+ * Lý do: Gemini API chặn request từ các region không được hỗ trợ (VN).
+ * Cloud Run ở us-central1 bypass được hạn chế này.
  */
-
-// Gemini API base URL (model is read from env at runtime)
-// Using v1 endpoint for broader region support
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 // System prompt cho phân tích văn bản hành chính
 const ND30_SYSTEM_PROMPT = `
@@ -58,11 +57,13 @@ export async function onRequestPost(context) {
       'Content-Type': 'application/json',
     };
 
-    // Get API key from environment
-    const apiKey = env.GEMINI_API_KEY;
-    if (!apiKey) {
+    // Get Cloud Run proxy URL and shared secret from environment
+    const proxyUrl = env.GEMINI_PROXY_URL;
+    const sharedSecret = env.PROXY_SHARED_SECRET;
+
+    if (!proxyUrl) {
       return new Response(
-        JSON.stringify({ success: false, error: 'API key chưa được cấu hình. Vui lòng liên hệ quản trị.', code: 'NO_API_KEY' }),
+        JSON.stringify({ success: false, error: 'GEMINI_PROXY_URL chưa được cấu hình.', code: 'NO_PROXY_URL' }),
         { status: 500, headers: corsHeaders }
       );
     }
@@ -78,7 +79,7 @@ export async function onRequestPost(context) {
       );
     }
 
-    // Build Gemini request
+    // Build Gemini request body
     const startTime = Date.now();
     let geminiBody;
 
@@ -121,22 +122,22 @@ export async function onRequestPost(context) {
       };
     }
 
-    // Resolve model from env (set in wrangler.jsonc or Dashboard)
-    const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const apiUrl = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
-
-    // Call Gemini API
-    const geminiResponse = await fetch(apiUrl, {
+    // Forward to Cloud Run proxy (us-central1) instead of calling Gemini directly
+    // This bypasses the "User location is not supported" restriction
+    const proxyResponse = await fetch(`${proxyUrl}/process`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geminiBody),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shared-Secret': sharedSecret || '',
+      },
+      body: JSON.stringify({ geminiBody }),
     });
 
-    if (!geminiResponse.ok) {
-      const errText = await geminiResponse.text();
-      console.error('Gemini API error:', geminiResponse.status, errText);
+    if (!proxyResponse.ok) {
+      const errData = await proxyResponse.json().catch(() => ({}));
+      console.error('Proxy error:', proxyResponse.status, errData);
 
-      if (geminiResponse.status === 429) {
+      if (proxyResponse.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: 'Đã vượt quá giới hạn API. Vui lòng thử lại sau vài phút.', code: 'RATE_LIMIT' }),
           { status: 429, headers: corsHeaders }
@@ -146,18 +147,26 @@ export async function onRequestPost(context) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Lỗi Gemini API: ${geminiResponse.status}`,
-          detail: errText.substring(0, 2000),
-          model: model,
-          code: 'GEMINI_ERROR',
+          error: errData.error || `Lỗi proxy: ${proxyResponse.status}`,
+          detail: errData.detail || '',
+          model: errData.model || '',
+          code: errData.code || 'PROXY_ERROR',
         }),
         { status: 502, headers: corsHeaders }
       );
     }
 
-    const geminiResult = await geminiResponse.json();
+    const proxyResult = await proxyResponse.json();
 
-    // Extract JSON from Gemini response
+    if (!proxyResult.success) {
+      return new Response(
+        JSON.stringify({ success: false, error: proxyResult.error || 'Cloud Run proxy trả lỗi.', code: 'PROXY_ERROR' }),
+        { status: 502, headers: corsHeaders }
+      );
+    }
+
+    // Extract structured data from Gemini response (via proxy)
+    const geminiResult = proxyResult.data;
     const responseText = geminiResult?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!responseText) {
