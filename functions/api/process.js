@@ -185,7 +185,12 @@ export async function onRequestPost(context) {
 
     if (!responseText) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Gemini không trả về kết quả hợp lệ.', code: 'EMPTY_RESPONSE' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Gemini không trả về kết quả hợp lệ.', 
+          code: 'EMPTY_RESPONSE',
+          detail: JSON.stringify(geminiResult) || 'Unknown format'
+        }),
         { status: 502, headers: corsHeaders }
       );
     }
