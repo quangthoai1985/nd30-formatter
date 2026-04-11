@@ -26,8 +26,8 @@ async function delay(ms) {
   const s3Url = initData.data.file_urls[0];
 
   console.log('2. Uploading file to S3...');
-  // We use the package.json as dummy file just to see if it triggers
-  const fileBuffer = fs.readFileSync('package.json'); 
+  // We use the ND30.pdf as dummy file just to see if it triggers
+  const fileBuffer = fs.readFileSync('ND30.pdf'); 
   const uploadRes = await fetch(s3Url, {
     method: 'PUT',
     body: fileBuffer
@@ -54,3 +54,4 @@ async function delay(ms) {
   }
 
 })();
+

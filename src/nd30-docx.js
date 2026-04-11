@@ -35,6 +35,7 @@ export async function generateND30Docx(data) {
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
     linebreaks: true, // Quan trọng để thay block \n thành line breaks
+    delimiters: { start: '{{', end: '}}' }
   });
 
   // 3. Chuẩn bị dữ liệu định dạng JSON
