@@ -71,7 +71,7 @@ async function tryBackendOCR(fileBuffer, fileName) {
       const statusData = await statusRes.json();
       
       // statusData structure for batch result
-      const extractResults = statusData?.data?.extract_result_list || [];
+      const extractResults = statusData?.data?.extract_result || [];
       const firstTask = extractResults[0];
 
       if (firstTask) {
@@ -81,10 +81,14 @@ async function tryBackendOCR(fileBuffer, fileName) {
           break;
         }
         if (state === 'error' || state === 'failed') {
-          throw new Error('MinerU xử lý thất bại');
+          throw new Error(`MinerU xử lý thất bại: ${firstTask.err_msg || 'Lỗi không xác định'}`);
         }
       }
       pollCount++;
+      
+      if (pollCount >= 60) {
+        throw new Error('MinerU xử lý quá lâu (hơn 3 phút). Cổng kết nối đã đóng lại.');
+      }
     }
 
     if (!resultData || !resultData.full_zip_url) {
