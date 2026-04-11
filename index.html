@@ -207,58 +207,89 @@
 
     <!-- ═══ VIEW: REVIEW ═══ -->
     <section id="view-review" class="view">
-      <div class="view-header">
-        <h2>Kiểm tra & Chỉnh sửa</h2>
-        <p class="view-subtitle">Kiểm tra kết quả phân tích trước khi tạo file DOCX</p>
+
+      <!-- ── Sticky Action Bar ── -->
+      <div class="review-topbar">
+        <div class="review-topbar-left">
+          <div class="review-topbar-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="review-topbar-title">Kiểm tra &amp; Chỉnh sửa</h2>
+            <p class="review-topbar-sub">Xem lại kết quả phân tích, điều chỉnh và xuất DOCX</p>
+          </div>
+        </div>
+        <div class="review-topbar-actions">
+          <button type="button" id="btn-back-input" class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+            <span>Quay lại</span>
+          </button>
+          <button type="button" id="btn-create-docx" class="btn-primary btn-download">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span>Tạo file DOCX</span>
+          </button>
+        </div>
       </div>
 
       <form id="review-form" class="review-form" onsubmit="return false">
-        <!-- === Thông tin chung === -->
-        <div class="form-section">
-          <h3 class="form-section-title">Thông tin chung</h3>
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="review-loai-vb">Loại văn bản</label>
-              <select id="review-loai-vb">
-                <option value="">— Chọn —</option>
-                <option value="QD">Quyết định</option>
-                <option value="NQ">Nghị quyết</option>
-                <option value="CV">Công văn</option>
-                <option value="TB">Thông báo</option>
-                <option value="TTR">Tờ trình</option>
-                <option value="BC">Báo cáo</option>
-                <option value="KH">Kế hoạch</option>
-                <option value="CT">Chỉ thị</option>
-                <option value="HD">Hướng dẫn</option>
-                <option value="BB">Biên bản</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="review-ten-loai">Tên loại VB (IN HOA)</label>
-              <input type="text" id="review-ten-loai" placeholder="VD: QUYẾT ĐỊNH" />
+
+        <!-- ── Hàng 1: Thông tin chung | Cơ quan ban hành ── -->
+        <div class="form-row-2">
+
+          <div class="form-section">
+            <h3 class="form-section-title">Thông tin chung</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="review-loai-vb">Loại văn bản</label>
+                <select id="review-loai-vb">
+                  <option value="">— Chọn —</option>
+                  <option value="QD">Quyết định</option>
+                  <option value="NQ">Nghị quyết</option>
+                  <option value="CV">Công văn</option>
+                  <option value="TB">Thông báo</option>
+                  <option value="TTR">Tờ trình</option>
+                  <option value="BC">Báo cáo</option>
+                  <option value="KH">Kế hoạch</option>
+                  <option value="CT">Chỉ thị</option>
+                  <option value="HD">Hướng dẫn</option>
+                  <option value="BB">Biên bản</option>
+                </select>
+              </div>
+              <div class="form-group" id="section-ten-loai">
+                <label for="review-ten-loai">Tên loại VB (IN HOA)</label>
+                <input type="text" id="review-ten-loai" placeholder="VD: QUYẾT ĐỊNH" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- === Cơ quan ban hành === -->
-        <div class="form-section">
-          <h3 class="form-section-title">Cơ quan ban hành</h3>
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="review-cq-chu-quan">Cơ quan chủ quản</label>
-              <input type="text" id="review-cq-chu-quan" placeholder="VD: UBND TỈNH AN GIANG" />
-            </div>
-            <div class="form-group">
-              <label for="review-cq-ban-hanh">Cơ quan ban hành</label>
-              <input type="text" id="review-cq-ban-hanh" placeholder="VD: SỞ TÀI CHÍNH" />
+          <div class="form-section">
+            <h3 class="form-section-title">Cơ quan ban hành</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="review-cq-chu-quan">Cơ quan chủ quản</label>
+                <input type="text" id="review-cq-chu-quan" placeholder="VD: UBND TỈNH AN GIANG" />
+              </div>
+              <div class="form-group">
+                <label for="review-cq-ban-hanh">Cơ quan ban hành</label>
+                <input type="text" id="review-cq-ban-hanh" placeholder="VD: SỞ TÀI CHÍNH" />
+              </div>
             </div>
           </div>
+
         </div>
 
-        <!-- === Số ký hiệu + Ngày === -->
+        <!-- ── Hàng 2: Số · Ký hiệu · Địa danh · Ngày · Tháng · Năm ── -->
         <div class="form-section">
-          <h3 class="form-section-title">Số, ký hiệu & Ngày tháng</h3>
-          <div class="form-grid form-grid-4">
+          <h3 class="form-section-title">Số, ký hiệu &amp; Ngày tháng</h3>
+          <div class="form-grid form-grid-6">
             <div class="form-group">
               <label for="review-so">Số</label>
               <input type="text" id="review-so" placeholder="05" />
@@ -267,12 +298,10 @@
               <label for="review-ky-hieu">Ký hiệu</label>
               <input type="text" id="review-ky-hieu" placeholder="QĐ-UBND" />
             </div>
-            <div class="form-group span-2">
+            <div class="form-group">
               <label for="review-dia-danh">Địa danh</label>
               <input type="text" id="review-dia-danh" placeholder="Hà Nội" />
             </div>
-          </div>
-          <div class="form-grid form-grid-3">
             <div class="form-group">
               <label for="review-ngay">Ngày</label>
               <input type="text" id="review-ngay" placeholder="05" />
@@ -288,44 +317,55 @@
           </div>
         </div>
 
-        <!-- === Trích yếu === -->
+        <!-- ── Trích yếu ── -->
         <div class="form-section">
-          <h3 class="form-section-title">Trích yếu</h3>
+          <h3 class="form-section-title" id="label-trich-yeu">Trích yếu</h3>
           <div class="form-group">
             <textarea id="review-trich-yeu" rows="2" placeholder="Về việc..."></textarea>
           </div>
         </div>
 
-        <!-- === Căn cứ === -->
-        <div class="form-section">
+        <!-- ── Căn cứ ban hành ── -->
+        <div class="form-section" id="section-can-cu">
           <h3 class="form-section-title">Căn cứ ban hành</h3>
           <div class="form-group">
-            <textarea id="review-can-cu" rows="4" placeholder="Mỗi dòng = 1 căn cứ&#10;VD: Căn cứ Luật Tổ chức chính quyền địa phương..."></textarea>
+            <textarea id="review-can-cu" rows="4" placeholder="Mỗi dòng = 1 căn cứ&#10;VD: Căn cứ Luật Tổ chức chính quyền địa phương năm 2015..."></textarea>
           </div>
         </div>
 
-        <!-- === Kính gửi === -->
-        <div class="form-section">
+        <!-- ── Kính gửi ── -->
+        <div class="form-section" id="section-kinh-gui">
           <h3 class="form-section-title">Kính gửi</h3>
           <div class="form-group">
             <textarea id="review-kinh-gui" rows="3" placeholder="Mỗi dòng = 1 nơi kính gửi"></textarea>
           </div>
         </div>
 
-        <!-- === Nội dung === -->
-        <div class="form-section">
+        <!-- ── Nội dung: 2 panel (editor + preview) ── -->
+        <div class="form-section form-section-content">
           <h3 class="form-section-title">Nội dung văn bản</h3>
-          <div id="review-noi-dung-preview" class="noi-dung-preview"></div>
-          <div class="form-group">
-            <label for="review-noi-dung-raw">Chỉnh sửa nội dung (mỗi dòng = 1 mục)</label>
-            <textarea id="review-noi-dung-raw" rows="10" placeholder="Điều 1. ...&#10;1. Nội dung khoản&#10;a) Chi tiết điểm"></textarea>
+          <div class="noi-dung-split">
+            <div class="form-group">
+              <label for="review-noi-dung-raw">
+                Soạn thảo nội dung
+                <span class="label-secondary">— mỗi dòng = 1 mục</span>
+              </label>
+              <textarea id="review-noi-dung-raw" rows="22"
+                placeholder="Điều 1. ...&#10;1. Nội dung khoản&#10;a) Chi tiết điểm"></textarea>
+              <p id="noi-dung-hint" class="form-hint"></p>
+            </div>
+            <div class="noi-dung-preview-panel">
+              <div class="noi-dung-preview-label">Cấu trúc đã nhận diện</div>
+              <div id="review-noi-dung-preview" class="noi-dung-preview"></div>
+            </div>
           </div>
         </div>
 
-        <!-- === Ký tên === -->
-        <div class="form-section">
-          <h3 class="form-section-title">Ký tên</h3>
-          <div class="form-grid">
+        <!-- ── Hàng cuối: Ký tên | Nơi nhận ── -->
+        <div class="form-row-2">
+
+          <div class="form-section">
+            <h3 class="form-section-title">Ký tên</h3>
             <div class="form-group">
               <label for="review-quyen-han">Quyền hạn ký</label>
               <input type="text" id="review-quyen-han" placeholder="VD: TM. ỦY BAN NHÂN DÂN" />
@@ -334,40 +374,22 @@
               <label for="review-chuc-vu">Chức vụ người ký</label>
               <input type="text" id="review-chuc-vu" placeholder="VD: CHỦ TỊCH" />
             </div>
+            <div class="form-group">
+              <label for="review-ho-ten">Họ tên người ký</label>
+              <input type="text" id="review-ho-ten" placeholder="VD: Nguyễn Văn A" />
+            </div>
           </div>
-          <div class="form-group">
-            <label for="review-ho-ten">Họ tên người ký</label>
-            <input type="text" id="review-ho-ten" placeholder="VD: Nguyễn Văn A" />
+
+          <div class="form-section">
+            <h3 class="form-section-title">Nơi nhận</h3>
+            <div class="form-group">
+              <textarea id="review-noi-nhan" rows="6"
+                placeholder="Mỗi dòng = 1 nơi nhận&#10;VD: Như Điều 2;&#10;UBND tỉnh (b/c);&#10;Lưu: VT."></textarea>
+            </div>
           </div>
+
         </div>
 
-        <!-- === Nơi nhận === -->
-        <div class="form-section">
-          <h3 class="form-section-title">Nơi nhận</h3>
-          <div class="form-group">
-            <textarea id="review-noi-nhan" rows="4" placeholder="Mỗi dòng = 1 nơi nhận&#10;VD: Như Điều 2;&#10;UBND tỉnh (b/c);&#10;Lưu: VT."></textarea>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="review-actions">
-          <button type="button" id="btn-create-docx" class="btn-primary btn-download">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            <span>Tạo file DOCX</span>
-          </button>
-          <button type="button" id="btn-back-input" class="btn-secondary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="1 4 1 10 7 10"/>
-              <path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
-            </svg>
-            <span>Quay lại</span>
-          </button>
-        </div>
       </form>
     </section>
 

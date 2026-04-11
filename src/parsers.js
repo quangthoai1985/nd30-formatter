@@ -42,14 +42,32 @@ export async function parsePdf(arrayBuffer) {
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str).join(' ');
-      pages.push(pageText);
+
+      // Sắp xếp theo vị trí (y giảm dần = trên xuống, x tăng dần = trái sang phải).
+      // PDF lưu text theo stream order, không theo reading order —
+      // sorting giúp rule-parser nhận diện đúng cấu trúc dòng.
+      const items = [...textContent.items].sort((a, b) => {
+        const yDiff = b.transform[5] - a.transform[5]; // y: PDF bottom-up → invert
+        if (Math.abs(yDiff) > 3) return yDiff;         // dòng khác nhau
+        return a.transform[4] - b.transform[4];         // cùng dòng: trái → phải
+      });
+
+      // Thêm newline khi y jump đáng kể (dòng mới)
+      let pageText = '';
+      let lastY = null;
+      for (const item of items) {
+        const y = item.transform[5];
+        if (lastY !== null && Math.abs(y - lastY) > 3) pageText += '\n';
+        pageText += item.str;
+        lastY = y;
+      }
+      pages.push(pageText.trim());
     }
 
     const fullText = pages.join('\n\n').trim();
 
     // Nếu text rất ít → có thể là PDF scan
-    const isScanned = fullText.length < 50;
+    const isScanned = fullText.length < 100;
 
     return { text: fullText, isScanned };
   } catch (error) {

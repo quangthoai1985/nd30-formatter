@@ -5,17 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:cf": "wrangler pages dev --proxy 5173 -- npm run dev",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^8.0.4"
+    "vite": "^8.0.4",
+    "wrangler": "^4.81.1"
   },
   "dependencies": {
     "docx": "^9.6.1",
+    "docxtemplater": "^3.68.4",
     "file-saver": "^2.0.5",
     "mammoth": "^1.12.0",
     "pdfjs-dist": "^5.6.205",
+    "pizzip": "^3.2.0",
     "tesseract.js": "^7.0.0"
   }
 }

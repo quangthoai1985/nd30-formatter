@@ -1,8 +1,27 @@
 {
   // ND30 Formatter — Cloudflare Pages Configuration
-  // Static site only (no backend/functions needed)
+  // Deploy:     npx wrangler pages deploy dist --project-name nd30-formatter
+  // Set secret: npx wrangler pages secret put MISTRAL_API_KEY --project-name nd30-formatter
   "$schema": "https://json.schemastore.org/wrangler",
   "name": "nd30-formatter",
   "compatibility_date": "2024-12-01",
-  "pages_build_output_dir": "dist"
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nd30-jobs",
+      "database_id": "8edd47d8-b2f4-4587-81b2-8b4f5ec49d02"
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "nd30-uploads"
+    }
+  ],
+
+  "ai": {
+    "binding": "AI"
+  }
 }

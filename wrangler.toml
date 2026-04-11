@@ -1,19 +1,18 @@
 # ND30 Formatter — Wrangler Configuration
 # Deploy: npx wrangler pages deploy dist
+# Set secret: npx wrangler pages secret put MISTRAL_API_KEY
 
 name = "nd30-formatter"
 compatibility_date = "2024-12-01"
 
-# Environment Variables (cấu hình qua Dashboard sau deploy)
-# GEMINI_API_KEY = "..." ← Set via: npx wrangler pages secret put GEMINI_API_KEY
+[[d1_databases]]
+binding = "DB"
+database_name = "nd30-jobs"
+database_id = "8edd47d8-b2f4-4587-81b2-8b4f5ec49d02"
 
-# D1 Database (uncomment khi cần)
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "nd30-jobs"
-# database_id = "xxx-xxx-xxx"
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "nd30-uploads"
 
-# R2 Storage (uncomment khi cần)
-# [[r2_buckets]]
-# binding = "BUCKET"
-# bucket_name = "nd30-uploads"
+[ai]
+binding = "AI"

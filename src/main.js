@@ -8,6 +8,130 @@ import './style.css';
 import { parseDocx, parsePdf, detectFileType, getMimeType } from './parsers.js';
 import { parseVBHC, contentItemsToText, textToContentItems } from './rule-parser.js';
 import { downloadND30Docx } from './nd30-docx.js';
+import { getSchema } from './doc-schemas.js';
+import PizZip from 'pizzip';
+
+
+// ═══════════════════════════════════════════
+// BACKEND OCR HELPERS (MinerU 2.5 Pro)
+// ═══════════════════════════════════════════
+
+/**
+ * Gộp kết quả Workers AI với rule-parser.
+ * AI được ưu tiên cho các field đơn giản; rule-parser giữ noi_dung (phức tạp hơn).
+ */
+function mergeExtracted(aiResult, ruleResult) {
+  if (!aiResult) return ruleResult;
+  const merged = { ...ruleResult };
+  for (const [key, val] of Object.entries(aiResult)) {
+    if (key === 'noi_dung') continue; // rule-parser xử lý tốt hơn
+    const isEmpty = val === null || val === undefined || val === ''
+      || (Array.isArray(val) && val.length === 0);
+    if (!isEmpty) merged[key] = val;
+  }
+  return merged;
+}
+
+/**
+ * Upload file qua MinerU 2.5 Pro (S3), extract text (ZIP), sau đó gọi /api/extract-ai để bóc tách.
+ * Trả về { structuredData, ocrText } hoặc null nếu thất bại.
+ */
+async function tryBackendOCR(fileBuffer, fileName) {
+  try {
+    setProcessingStatus('1/5 Tải file lên hệ thống (qua Cloudflare Edge)...');
+    
+    // Gửi trực tiếp file dưới dạng FormData (Worker proxy sẽ lo phần S3 do một số mạng của VN chặn/chậm S3 Aliyun)
+    const formData = new FormData();
+    // Do fileBuffer chỉ là ArrayBuffer, file nguyên bản là Blob cần tên, ta gửi buffer dưới dạng file
+    formData.append('file', new Blob([fileBuffer]), fileName);
+
+    const initRes = await fetch('/api/mineru-upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!initRes.ok) {
+       const errJson = await initRes.json().catch(() => ({}));
+       throw new Error(`Upload file thất bại: ${errJson.error || initRes.statusText}`);
+    }
+    
+    const { batchId } = await initRes.json();
+    if (!batchId) {
+      throw new Error('MinerU không trả về batchId hợp lệ');
+    }
+
+    setProcessingStatus('3/5 Đang chờ MinerU nhận dạng (có thể mất 1-2 phút)...');
+    let resultData = null;
+    let pollCount = 0;
+    while (pollCount < 60) {
+      await new Promise(r => setTimeout(r, 3000));
+      const statusRes = await fetch(`/api/mineru-status?batchId=${batchId}`);
+      if (!statusRes.ok) throw new Error('Lỗi truy vấn trạng thái MinerU');
+      
+      const statusData = await statusRes.json();
+      
+      // statusData structure for batch result
+      const extractResults = statusData?.data?.extract_result_list || [];
+      const firstTask = extractResults[0];
+
+      if (firstTask) {
+        const state = firstTask.state;
+        if (state === 'done') {
+          resultData = firstTask;
+          break;
+        }
+        if (state === 'error' || state === 'failed') {
+          throw new Error('MinerU xử lý thất bại');
+        }
+      }
+      pollCount++;
+    }
+
+    if (!resultData || !resultData.full_zip_url) {
+      throw new Error('MinerU timeout hoặc kết quả trả về trống');
+    }
+
+    setProcessingStatus('4/5 Tải kết quả xử lý và giải nén...');
+    const zipRes = await fetch(resultData.full_zip_url);
+    if (!zipRes.ok) throw new Error('Lỗi khi tải file ZIP kết quả từ MinerU');
+    const zipBuffer = await zipRes.arrayBuffer();
+
+    const zip = new PizZip(zipBuffer);
+    let mdContent = '';
+    for (const [name, file] of Object.entries(zip.files)) {
+      if (!file.dir && (name.endsWith('/full.md') || name === 'full.md')) {
+        mdContent = file.asText();
+        break;
+      }
+    }
+    
+    if (!mdContent) throw new Error('Không tìm thấy file full.md trong kết quả trả về');
+
+    setProcessingStatus('5/5 Gọi AI đọc hiểu vào bóc tách các trường...');
+    const ruleResult = parseVBHC(mdContent);
+
+    const aiRes = await fetch('/api/extract-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ textMarkdown: mdContent })
+    });
+    
+    let aiExtracted = null;
+    if (aiRes.ok) {
+        const aiData = await aiRes.json();
+        if (aiData.success && aiData.extracted) {
+            aiExtracted = aiData.extracted;
+        }
+    }
+
+    const structuredData = mergeExtracted(aiExtracted, ruleResult);
+    return { structuredData, ocrText: mdContent };
+
+  } catch (err) {
+    console.error('tryBackendOCR error:', err);
+    return null;
+  }
+}
 
 // ═══════════════════════════════════════════
 // STATE
@@ -237,7 +361,6 @@ async function processFile() {
     const fileType = detectFileType(state.selectedFile.name);
     let extractedText = '';
     const isImage = fileType === 'image';
-    let isScannedPdf = false;
 
     // Show/hide OCR step
     showOcrStep(isImage);
@@ -253,38 +376,63 @@ async function processFile() {
       setStep('step-parse', 'done');
 
     } else if (fileType === 'pdf') {
-      // Try text extraction first
-      const { text, isScanned } = await parsePdf(state.selectedFileBuffer);
+      // Luôn thử MinerU 2.5 Pro trước cho MỌI PDF (cả text và scan).
+      // pdf.js trích xuất text không theo thứ tự đọc với bố cục 2 cột
+      // đặc trưng của văn bản hành chính ND30, dẫn đến rule-parser thất bại.
+      showOcrStep(true);
       setStep('step-parse', 'done');
+      setStep('step-ocr', 'active');
+      setProcessingStatus('Đang nhận dạng bản tài liệu (MinerU 2.5 Pro)...');
+
+      const backendResult = await tryBackendOCR(state.selectedFileBuffer, state.selectedFile.name);
+      if (backendResult) {
+        setStep('step-ocr', 'done');
+        setStep('step-analyze', 'done');
+        state.parsedData = backendResult.structuredData;
+        populateReviewForm(state.parsedData);
+        navigateTo('review');
+        showToast('Phân tích hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
+        return;
+      }
+
+      // Fallback: pdf.js text extraction (nếu MinerU thất bại)
+      setProcessingStatus('MinerU 2.5 Pro thất bại, thử trích xuất text PDF cơ bản...');
+      const { text, isScanned } = await parsePdf(state.selectedFileBuffer);
 
       if (isScanned) {
-        isScannedPdf = true;
-        showOcrStep(true);
-
-        // OCR scanned PDF
-        setStep('step-ocr', 'active');
-        setProcessingStatus('OCR đang đọc PDF scan...');
-
+        // PDF scan không có text → Tesseract.js
+        setProcessingStatus('PDF scan, đang dùng OCR dự phòng...');
         const { ocrPdfPages } = await import('./ocr-engine.js');
         extractedText = await ocrPdfPages(state.selectedFileBuffer, (pct) => {
-          setProcessingStatus(`OCR đang đọc PDF scan... ${pct}%`);
+          setProcessingStatus(`OCR dự phòng đang đọc PDF scan... ${pct}%`);
         });
-        setStep('step-ocr', 'done');
       } else {
         extractedText = text;
       }
+      setStep('step-ocr', 'done');
 
     } else if (isImage) {
       setStep('step-parse', 'done');
-
-      // OCR image
       setStep('step-ocr', 'active');
-      setProcessingStatus('OCR đang đọc ảnh (tiếng Việt)...');
+      setProcessingStatus('Đang nhận dạng ảnh (MinerU 2.5 Pro)...');
 
+      const backendResult = await tryBackendOCR(state.selectedFileBuffer, state.selectedFile.name);
+      if (backendResult) {
+        setStep('step-ocr', 'done');
+        setStep('step-analyze', 'done');
+        state.parsedData = backendResult.structuredData;
+        populateReviewForm(state.parsedData);
+        navigateTo('review');
+        showToast('Phân tích hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
+        return;
+      }
+
+      // Fallback: Tesseract.js
+      setProcessingStatus('MinerU 2.5 Pro thất bại, đang dùng OCR dự phòng...');
       const { ocrImage } = await import('./ocr-engine.js');
       const blob = new Blob([state.selectedFileBuffer]);
       extractedText = await ocrImage(blob, (pct) => {
-        setProcessingStatus(`OCR đang đọc ảnh... ${pct}%`);
+        setProcessingStatus(`OCR dự phòng đang đọc ảnh... ${pct}%`);
       });
       setStep('step-ocr', 'done');
     }
@@ -363,6 +511,55 @@ async function processText() {
 
 
 // ═══════════════════════════════════════════
+// DOC-TYPE SCHEMA — Điều chỉnh form theo loại VB
+// ═══════════════════════════════════════════
+
+/**
+ * Áp dụng schema của loại văn bản lên form review.
+ * Ẩn/hiện section, cập nhật label, placeholder, gợi ý nội dung.
+ */
+function applyDocSchema(loai) {
+  const schema = getSchema(loai);
+
+  // ── Section: Tên loại VB ──
+  const secTenLoai = $('section-ten-loai');
+  if (secTenLoai) secTenLoai.hidden = schema ? !schema.showTenLoai : false;
+
+  // ── Section: Căn cứ ban hành ──
+  const secCanCu = $('section-can-cu');
+  if (secCanCu) secCanCu.hidden = schema ? !schema.showCanCu : false;
+
+  // ── Section: Kính gửi ──
+  const secKinhGui = $('section-kinh-gui');
+  if (secKinhGui) secKinhGui.hidden = schema ? !schema.showKinhGui : false;
+
+  if (!schema) return;
+
+  // ── Label trích yếu ──
+  const lblTrichYeu = $('label-trich-yeu');
+  if (lblTrichYeu) lblTrichYeu.textContent = schema.trichYeuLabel ?? 'Trích yếu';
+
+  // ── Placeholder trích yếu ──
+  const txtTrichYeu = $('review-trich-yeu');
+  if (txtTrichYeu && schema.trichYeuPlaceholder) {
+    txtTrichYeu.placeholder = schema.trichYeuPlaceholder;
+  }
+
+  // ── Placeholder + gợi ý nội dung ──
+  const txtNoiDung = $('review-noi-dung-raw');
+  if (txtNoiDung && schema.noiDungPlaceholder) {
+    txtNoiDung.placeholder = schema.noiDungPlaceholder;
+  }
+
+  const hintEl = $('noi-dung-hint');
+  if (hintEl) {
+    hintEl.textContent = schema.noiDungHint ?? '';
+    hintEl.hidden = !schema.noiDungHint;
+  }
+}
+
+
+// ═══════════════════════════════════════════
 // REVIEW FORM
 // ═══════════════════════════════════════════
 
@@ -412,6 +609,9 @@ function populateReviewForm(data) {
 
   // Nơi nhận (mỗi dòng = 1 item)
   setVal('review-noi-nhan', Array.isArray(data.noi_nhan) ? data.noi_nhan.join('\n') : '');
+
+  // Điều chỉnh form theo loại văn bản đã nhận diện
+  applyDocSchema(data.loai_van_ban);
 }
 
 /**
@@ -488,14 +688,77 @@ function renderNoiDungPreview(items) {
 
 
 // ═══════════════════════════════════════════
+// VALIDATION TRƯỚC KHI XUẤT DOCX
+// ═══════════════════════════════════════════
+
+/**
+ * Kiểm tra các trường bắt buộc trước khi xuất DOCX.
+ * Trả về danh sách cảnh báo (warnings) và lỗi (errors).
+ */
+function validateData(data) {
+  const errors = [];
+  const warnings = [];
+
+  // Trường bắt buộc
+  if (!data.co_quan_ban_hanh?.trim()) errors.push('Thiếu tên cơ quan ban hành');
+  if (!data.so?.trim())               errors.push('Thiếu số văn bản');
+  if (!data.ky_hieu?.trim())          errors.push('Thiếu ký hiệu văn bản');
+  if (!data.trich_yeu?.trim())        errors.push('Thiếu trích yếu nội dung');
+
+  // Kiểm tra ngày tháng năm
+  const ngay = parseInt(data.ngay, 10);
+  const thang = parseInt(data.thang, 10);
+  const nam = parseInt(data.nam, 10);
+
+  if (!data.ngay || isNaN(ngay) || ngay < 1 || ngay > 31) {
+    errors.push('Ngày không hợp lệ (phải từ 01–31)');
+  }
+  if (!data.thang || isNaN(thang) || thang < 1 || thang > 12) {
+    errors.push('Tháng không hợp lệ (phải từ 01–12)');
+  }
+  if (!data.nam || isNaN(nam) || nam < 1990 || nam > 2100) {
+    errors.push('Năm không hợp lệ');
+  }
+  if (!data.dia_danh?.trim()) {
+    warnings.push('Thiếu địa danh trong dòng ngày tháng');
+  }
+
+  // Kiểm tra nội dung
+  if (!data.noi_dung || data.noi_dung.length === 0) {
+    warnings.push('Chưa có nội dung văn bản');
+  }
+
+  // Kiểm tra ký tên
+  if (!data.ho_ten_ky?.trim()) {
+    warnings.push('Thiếu họ tên người ký');
+  }
+
+  return { errors, warnings };
+}
+
+
+// ═══════════════════════════════════════════
 // CREATE DOCX FROM REVIEW
 // ═══════════════════════════════════════════
 
 async function createDocxFromReview() {
   try {
     const data = collectReviewData();
-    state.parsedData = data;
 
+    // Validate trước khi xuất
+    const { errors, warnings } = validateData(data);
+
+    if (errors.length > 0) {
+      showToast('Không thể xuất DOCX:\n• ' + errors.join('\n• '), 'error');
+      return;
+    }
+
+    if (warnings.length > 0) {
+      // Cảnh báo nhưng vẫn cho phép xuất
+      showToast('Lưu ý: ' + warnings.join(' | '), 'warning');
+    }
+
+    state.parsedData = data;
     const filename = await downloadND30Docx(data);
     showResult(data, filename);
 
@@ -619,6 +882,11 @@ function initEventListeners() {
   $('sidebar-overlay')?.addEventListener('click', () => {
     $('sidebar').classList.remove('open');
     $('sidebar-overlay').classList.remove('active');
+  });
+
+  // Khi user đổi loại văn bản → cập nhật form ngay lập tức
+  $('review-loai-vb')?.addEventListener('change', (e) => {
+    applyDocSchema(e.target.value);
   });
 
   // Sync nội dung textarea with preview (live re-render on input)
