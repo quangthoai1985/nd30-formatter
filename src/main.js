@@ -96,7 +96,9 @@ async function tryBackendOCR(fileBuffer, fileName) {
     }
 
     setProcessingStatus('4/5 Tải kết quả xử lý và giải nén...');
-    const zipRes = await fetch(resultData.full_zip_url);
+    // Proxy qua Worker để tránh lỗi CORS từ CDN Trung Quốc của MinerU
+    const zipProxyUrl = `/api/mineru-download?url=${encodeURIComponent(resultData.full_zip_url)}`;
+    const zipRes = await fetch(zipProxyUrl);
     if (!zipRes.ok) throw new Error('Lỗi khi tải file ZIP kết quả từ MinerU');
     const zipBuffer = await zipRes.arrayBuffer();
 
