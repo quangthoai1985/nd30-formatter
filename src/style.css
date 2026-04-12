@@ -1151,6 +1151,14 @@ body {
   align-items: stretch;
 }
 
+/* Căn chỉnh form-grid trong form-row-2 để labels/input đều nhau */
+.form-row-2 .form-section .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  align-items: start;
+}
+
 /* Stacked form-groups bên trong section có spacing */
 .form-section .form-group + .form-group {
   margin-top: var(--space-md);
@@ -1229,6 +1237,18 @@ body {
   font-size: 0.9375rem;
   line-height: 1.5;
   transition: all var(--duration-fast);
+  box-sizing: border-box;
+  height: 44px;
+}
+
+.form-group select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23727785' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+  height: 44px;
 }
 
 .form-group input:focus,
@@ -1246,19 +1266,11 @@ body {
   font-style: italic;
 }
 
-.form-group select {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23727785' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 40px;
-}
-
 .form-group textarea {
   resize: vertical;
   line-height: 1.65;
   min-height: 80px;
+  height: auto;
 }
 
 /* ── Nội dung 2-panel split ── */

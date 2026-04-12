@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git merge:*)",
+      "Bash(git worktree:*)",
+      "Bash(git branch:*)",
+      "Bash(find E:/WEB/ND30 -type f \\\\\\( -name \"*.md\" -o -name \"*.txt\" -o -name \"*.json\" \\\\\\) -exec grep -l \"Hướng dẫn.*36\\\\|36.*HD\\\\|VPTW\" {} \\\\;)",
+      "Bash(xargs grep:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(kill %1)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
+    ]
+  }
+}
