@@ -1,6 +1,6 @@
 # ND30 Formatter — Wrangler Configuration
 # Deploy: npx wrangler pages deploy dist
-# Set secret: npx wrangler pages secret put MISTRAL_API_KEY
+# Set secret: npx wrangler pages secret put OPENROUTER_API_KEY
 
 name = "nd30-formatter"
 compatibility_date = "2024-12-01"

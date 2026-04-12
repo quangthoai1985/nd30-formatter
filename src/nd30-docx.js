@@ -7,6 +7,22 @@ import { saveAs } from 'file-saver';
  * Sử dụng docxtemplater để map dữ liệu vào file .docx chuẩn
  */
 
+/**
+ * Tự động thêm "Về việc" vào đầu trích yếu nếu cần.
+ * Các loại QĐ, NQ, CT, KH, BC, TTR thường có dạng "Về việc ..."
+ * Công văn (CV) dùng "V/v"
+ */
+function formatTrichYeu(trichYeu, loaiVB) {
+  if (!trichYeu) return '';
+  const t = trichYeu.trim();
+  // Đã có "Về việc" hoặc "V/v" rồi thì không thêm
+  if (/^(Về việc|V\/v)\b/i.test(t)) return t;
+  // Công văn dùng "V/v"
+  if (loaiVB === 'CV') return `V/v ${t}`;
+  // Các loại khác dùng "Về việc" (chữ thường 'v' cho chữ sau)
+  return `Về việc ${t.charAt(0).toLowerCase()}${t.slice(1)}`;
+}
+
 export async function generateND30Docx(data) {
   const loai_van_ban = (data.loai_van_ban || 'CV').toUpperCase();
   let templateName = 'Template_CongVan.docx';
@@ -52,10 +68,16 @@ export async function generateND30Docx(data) {
     noi_dung_text = data.noi_dung.map(item => {
       if (typeof item === 'string') return item;
       return item.tieu_de ? `${item.tieu_de}\n${item.text || ''}` : (item.text || '');
-    }).join('\n\n');
+    }).join('\n');
   } else {
     noi_dung_text = data.noi_dung || '';
   }
+  // Dọn sạch: gộp nhiều dòng trống liên tiếp thành 1, xóa khoảng trắng thừa đầu/cuối dòng
+  noi_dung_text = noi_dung_text
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+$/gm, '')         // xóa trailing whitespace mỗi dòng
+    .replace(/\n{3,}/g, '\n\n')       // tối đa 2 newline liên tiếp (1 dòng trống)
+    .trim();
 
   const noi_nhan_arr = Array.isArray(data.noi_nhan) && data.noi_nhan.length > 0
     ? data.noi_nhan 
@@ -67,15 +89,28 @@ export async function generateND30Docx(data) {
     so_ky_hieu,
     dia_danh: data.dia_danh || '',
     ngay_thang_nam,
-    trich_yeu: data.trich_yeu || data.trich_yeu_cv || '',
+    trich_yeu: formatTrichYeu(data.trich_yeu || data.trich_yeu_cv || '', loai_van_ban),
     kinh_gui: Array.isArray(data.kinh_gui) ? data.kinh_gui.join('\n- ') : (data.kinh_gui || ''),
     can_cu: Array.isArray(data.can_cu) ? data.can_cu.join('\n') : (data.can_cu || ''),
+    can_cu_lines: (Array.isArray(data.can_cu) ? data.can_cu : []).map((c, i, arr) => {
+      c = c.trim();
+      if (c && !c.endsWith(';') && !c.endsWith('.') && !c.endsWith(',')) {
+        c += (i === arr.length - 1) ? '.' : ';'; // cuối cùng dấu chấm, còn lại dấu phẩy chấm
+      }
+      return c;
+    }).filter(c => c.length > 0),
     noi_nhan: noi_nhan_arr, // Array cho {{#noi_nhan}}
     quyen_han_ky: data.quyen_han_ky?.toUpperCase() || '',
     chuc_vu_ky: data.chuc_vu_ky?.toUpperCase() || '',
     ho_ten_ky: data.ho_ten_ky || '',
     
-    // Nội dung map cho nhiều file template tương ứng
+    // Chức danh người ban hành (QĐ, NQ): ví dụ "CHỦ TỊCH ỦY BAN NHÂN DÂN THÀNH PHỐ CHÂU ĐỐC"
+    chuc_danh_ban_hanh: data.chuc_danh_ban_hanh?.toUpperCase() || '',
+
+    // Nội dung dạng mảng dòng cho paragraph loop (mỗi dòng = 1 paragraph có thụt đầu dòng)
+    noi_dung_lines: noi_dung_text.split('\n').filter(line => line.trim().length > 0),
+
+    // Nội dung dạng text cho các template chưa chuyển sang loop
     noi_dung_cong_van: noi_dung_text,
     noi_dung_quyet_dinh: noi_dung_text,
     noi_dung_to_trinh: noi_dung_text,
