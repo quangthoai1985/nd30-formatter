@@ -19,15 +19,36 @@ const VB_TYPE_MAP = {
   'HƯỚNG DẪN': 'HD',
   'BIÊN BẢN': 'BB',
   'CÔNG VĂN': 'CV',
+  // HD36 additions
+  'KẾT LUẬN': 'KL',
+  'QUY ĐỊNH': 'QDI',
+  'QUY CHẾ': 'QC',
+  'CHƯƠNG TRÌNH': 'CTR',
+  'THÔNG TRI': 'TT',
+};
+
+// HD36 type map: dùng khi phát hiện là VB Đảng
+const VB_TYPE_MAP_DANG = {
+  'QUYẾT ĐỊNH': 'D_QD', 'NGHỊ QUYẾT': 'D_NQ', 'CHỈ THỊ': 'D_CT',
+  'KẾT LUẬN': 'D_KL', 'QUY ĐỊNH': 'D_QDI', 'QUY CHẾ': 'D_QC',
+  'BÁO CÁO': 'D_BC', 'TỜ TRÌNH': 'D_TTR', 'THÔNG BÁO': 'D_TB',
+  'HƯỚNG DẪN': 'D_HD', 'CHƯƠNG TRÌNH': 'D_CTR', 'THÔNG TRI': 'D_TT',
+  'BIÊN BẢN': 'D_BB',
 };
 
 // Regex patterns cho các thành phần văn bản hành chính
 const RE = {
   QUOC_HIEU: /CỘNG\s*HÒA\s*XÃ\s*HỘI\s*CHỦ\s*NGHĨA\s*VIỆT\s*NAM/i,
   TIEU_NGU: /Độc\s*lập\s*[-–—]\s*Tự\s*do\s*[-–—]\s*Hạnh\s*phúc/i,
+  // VB Đảng: nhận diện "ĐẢNG CỘNG SẢN VIỆT NAM"
+  DANG_HEADER: /ĐẢNG\s*CỘNG\s*SẢN\s*VIỆT\s*NAM/i,
+  // VB Đảng: số ký hiệu dạng "Số 15-NQ/HU"
+  SO_KY_HIEU_DANG: /Số\s+(\d+)\s*[-–]\s*([A-ZĐa-zđ]+)\s*\/\s*([^\n;]+)/i,
+  // VB Đảng: quyền hạn ký T/M, K/T, T/L
+  QUYEN_HAN_DANG: /^\s*(T\/M|K\/T|T\/L|Q\.)\s+(.+)/im,
   SO_KY_HIEU: /Số\s*:\s*(\d+)\s*\/\s*([^\n;]+)/i,
   DIA_DANH_NGAY: /([^,\n]{2,30}?),\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/i,
-  TEN_LOAI: /^\s*(QUYẾT\s*ĐỊNH|NGHỊ\s*QUYẾT|THÔNG\s*BÁO|TỜ\s*TRÌNH|BÁO\s*CÁO|KẾ\s*HOẠCH|CHỈ\s*THỊ|HƯỚNG\s*DẪN|BIÊN\s*BẢN)\s*$/m,
+  TEN_LOAI: /^\s*(QUYẾT\s*ĐỊNH|NGHỊ\s*QUYẾT|THÔNG\s*BÁO|TỜ\s*TRÌNH|BÁO\s*CÁO|KẾ\s*HOẠCH|CHỈ\s*THỊ|HƯỚNG\s*DẪN|BIÊN\s*BẢN|KẾT\s*LUẬN|QUY\s*ĐỊNH|QUY\s*CHẾ|CHƯƠNG\s*TRÌNH|THÔNG\s*TRI)\s*$/m,
   TRICH_YEU_VV: /(?:Về\s*việc|V\/v)\s*[:\s]*(.+)/i,
   CAN_CU_START: /^\s*Căn\s*cứ\s/mi,
   KINH_GUI: /^\s*Kính\s*gửi\s*:\s*/mi,
@@ -35,7 +56,7 @@ const RE = {
   KHOAN: /^\s*(\d{1,2})\.\s+(.*)/,
   DIEM: /^\s*([a-zđ])\)\s+(.*)/,
   MUC_LON: /^\s*(Chương|Mục|Phần)\s+([IVXLCDM\d]+)[.:\s]\s*(.*)/i,
-  QUYEN_HAN: /^\s*(TM\.|KT\.|TUQ\.|TL\.)\s*(.+)/i,
+  QUYEN_HAN: /^\s*(TM\.|KT\.|TUQ\.|TL\.|T\/M|K\/T|T\/L|Q\.)\s+(.+)/i,
   NOI_NHAN: /Nơi\s*nhận\s*:/i,
   KET_THUC: /\.\s*\/\s*\./,
   QD_COLON: /^\s*QUYẾT\s*ĐỊNH\s*:\s*$/m,
@@ -126,6 +147,21 @@ export function parseVBHC(rawText) {
     noi_nhan: [],
   };
 
+  // ── Step 0: Detect Party document ──
+  let isDangDoc = false;
+  const dangHeaderMatch = findPattern(text, RE.DANG_HEADER);
+  const quocHieuCheck = findPattern(text, RE.QUOC_HIEU);
+  // Nếu có "ĐẢNG CỘNG SẢN VIỆT NAM" và KHÔNG có Quốc hiệu → VB Đảng
+  if (dangHeaderMatch && !quocHieuCheck) isDangDoc = true;
+  // Hoặc: format số ký hiệu dạng HD36 ("Số 15-NQ/HU")
+  const skhDangCheck = findPattern(text, RE.SO_KY_HIEU_DANG);
+  if (skhDangCheck && !quocHieuCheck) isDangDoc = true;
+  // Hoặc: quyền hạn ký dạng T/M, K/T, T/L (gạch chéo)
+  const qhDangCheck = findPattern(text, RE.QUYEN_HAN_DANG);
+  if (qhDangCheck) isDangDoc = true;
+
+  result._isDangDoc = isDangDoc;
+
   // ── Step 1: Find all landmarks ──
   const landmarks = {};
 
@@ -135,11 +171,25 @@ export function parseVBHC(rawText) {
   const tnMatch = findPattern(text, RE.TIEU_NGU);
   if (tnMatch) landmarks.tieuNgu = tnMatch;
 
+  // Thử format ND30 trước: "Số: 15/QĐ-UBND"
   const skhMatch = findPattern(text, RE.SO_KY_HIEU);
-  if (skhMatch) {
+  // Thử format HD36: "Số 15-NQ/HU"
+  const skhDangMatch = findPattern(text, RE.SO_KY_HIEU_DANG);
+
+  if (isDangDoc && skhDangMatch) {
+    landmarks.soKyHieu = skhDangMatch;
+    result.so = skhDangMatch.match[1].trim();
+    result.ky_hieu = `${skhDangMatch.match[2].trim()}/${skhDangMatch.match[3].trim()}`;
+    result.so_ky_hieu = skhDangMatch.match[0].trim();
+  } else if (skhMatch) {
     landmarks.soKyHieu = skhMatch;
     result.so = skhMatch.match[1].trim();
     result.ky_hieu = skhMatch.match[2].trim();
+  } else if (skhDangMatch) {
+    landmarks.soKyHieu = skhDangMatch;
+    result.so = skhDangMatch.match[1].trim();
+    result.ky_hieu = `${skhDangMatch.match[2].trim()}/${skhDangMatch.match[3].trim()}`;
+    result.so_ky_hieu = skhDangMatch.match[0].trim();
   }
 
   const ddnMatch = findPattern(text, RE.DIA_DANH_NGAY);
@@ -157,10 +207,20 @@ export function parseVBHC(rawText) {
     const tenLoaiRaw = tlMatch.match[1].trim().replace(/\s+/g, ' ');
     result.ten_loai_vb = tenLoaiRaw;
 
-    for (const [key, code] of Object.entries(VB_TYPE_MAP)) {
+    const typeMapToUse = isDangDoc ? VB_TYPE_MAP_DANG : VB_TYPE_MAP;
+    for (const [key, code] of Object.entries(typeMapToUse)) {
       if (tenLoaiRaw.toUpperCase().replace(/\s+/g, ' ') === key) {
         result.loai_van_ban = code;
         break;
+      }
+    }
+    // Fallback to ND30 map if not found in Đảng map
+    if (!result.loai_van_ban && isDangDoc) {
+      for (const [key, code] of Object.entries(VB_TYPE_MAP)) {
+        if (tenLoaiRaw.toUpperCase().replace(/\s+/g, ' ') === key) {
+          result.loai_van_ban = code;
+          break;
+        }
       }
     }
   }
@@ -415,7 +475,7 @@ function _extractNoiDung(text, landmarks, result) {
   }
 
   // Before signature (TM., KT., TUQ., TL.)
-  const sigMatch = text.substring(contentStart).match(/\n\s*(TM\.|KT\.|TUQ\.|TL\.)\s/i);
+  const sigMatch = text.substring(contentStart).match(/\n\s*(TM\.|KT\.|TUQ\.|TL\.|T\/M|K\/T|T\/L|Q\.)\s/i);
   if (sigMatch) {
     const sigIdx = contentStart + sigMatch.index;
     if (sigIdx < contentEnd) contentEnd = sigIdx;
@@ -528,7 +588,7 @@ function _extractSignature(text, landmarks, result) {
 
   // Or find TM./KT./TUQ./TL. directly
   if (!sigStart) {
-    const qhMatch = text.match(/\n\s*(TM\.|KT\.|TUQ\.|TL\.)\s/i);
+    const qhMatch = text.match(/\n\s*(TM\.|KT\.|TUQ\.|TL\.|T\/M|K\/T|T\/L|Q\.)\s/i);
     if (qhMatch) sigStart = qhMatch.index;
   }
 
@@ -611,26 +671,34 @@ function _extractNoiNhanList(text, landmarks, result) {
  * Infer document type từ ký hiệu và nội dung
  */
 function _inferDocType(result) {
+  const isDang = result._isDangDoc;
+  const prefix = isDang ? 'D_' : '';
+
   // From ký hiệu
   if (result.ky_hieu) {
     const kh = result.ky_hieu.toUpperCase();
-    if (kh.includes('QĐ') || kh.includes('QD')) return 'QD';
-    if (kh.includes('NQ')) return 'NQ';
-    if (kh.includes('TB')) return 'TB';
-    if (/TTR|TTr/.test(kh)) return 'TTR';
-    if (kh.includes('BC')) return 'BC';
-    if (kh.includes('KH')) return 'KH';
-    if (kh.includes('CT')) return 'CT';
-    if (kh.includes('HD')) return 'HD';
-    if (kh.includes('BB')) return 'BB';
-    if (kh.includes('CV')) return 'CV';
+    if (kh.includes('QĐ') || kh.includes('QD')) return prefix + 'QD';
+    if (kh.includes('NQ')) return prefix + 'NQ';
+    if (kh.includes('KL')) return prefix + 'KL';
+    if (kh.includes('QĐI')) return prefix + 'QDI';
+    if (kh.includes('QC')) return prefix + 'QC';
+    if (kh.includes('TB')) return prefix + 'TB';
+    if (/TTR|TTr/.test(kh)) return prefix + 'TTR';
+    if (kh.includes('BC')) return prefix + 'BC';
+    if (!isDang && kh.includes('KH')) return 'KH'; // KH only in ND30
+    if (kh.includes('CT') && !kh.includes('CTR')) return prefix + 'CT';
+    if (kh.includes('CTR') || /CTr/.test(result.ky_hieu)) return prefix + 'CTR';
+    if (kh.includes('TT') && !kh.includes('TTR')) return prefix + 'TT';
+    if (kh.includes('HD')) return prefix + 'HD';
+    if (kh.includes('BB')) return prefix + 'BB';
+    if (kh.includes('CV')) return prefix + 'CV';
   }
 
-  // Has kính gửi but no tên loại → likely CV (Công văn)
-  if (result.kinh_gui.length > 0 && !result.ten_loai_vb) return 'CV';
+  // Has kính gửi but no tên loại → likely CV
+  if (result.kinh_gui.length > 0 && !result.ten_loai_vb) return prefix + 'CV';
 
   // Has Điều → likely QĐ or NQ
-  if (result.noi_dung.some(item => item.type === 'dieu')) return 'QD';
+  if (result.noi_dung.some(item => item.type === 'dieu')) return prefix + 'QD';
 
   return '';
 }

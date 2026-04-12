@@ -1,8 +1,8 @@
-# ND30 Formatter — Wrangler Configuration
-# Deploy: npx wrangler pages deploy dist
-# Set secret: npx wrangler pages secret put OPENROUTER_API_KEY
+# VBFormatter — Wrangler Configuration
+# Deploy: npx wrangler pages deploy dist --project-name vbformatter
+# Set secret: npx wrangler pages secret put OPENROUTER_API_KEY --project-name vbformatter
 
-name = "nd30-formatter"
+name = "vbformatter"
 compatibility_date = "2024-12-01"
 
 [[d1_databases]]

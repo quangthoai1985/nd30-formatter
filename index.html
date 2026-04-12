@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ND30 Formatter — Chuẩn hóa Văn bản Hành chính</title>
-  <meta name="description" content="Công cụ tự động chuẩn hóa văn bản hành chính theo Nghị định 30/2020/NĐ-CP. Hỗ trợ DOCX, PDF, OCR và Plaintext." />
+  <title>VBFormatter — Chuẩn hóa Văn bản Hành chính &amp; Đảng</title>
+  <meta name="description" content="Công cụ tự động chuẩn hóa văn bản hành chính (NĐ30) và văn bản Đảng (HD36). Hỗ trợ DOCX, PDF, OCR và Plaintext." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
@@ -24,8 +24,8 @@
         </svg>
       </div>
       <div class="brand-text">
-        <span class="brand-name">ND30</span>
-        <span class="brand-sub">Formatter</span>
+        <span class="brand-name">VBFormatter</span>
+        <span class="brand-sub">NĐ30 &amp; HD36</span>
       </div>
     </div>
 
@@ -49,7 +49,7 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="footer-badge">Nghị định 30/2020</div>
+      <div class="footer-badge">NĐ30 &amp; HD36</div>
     </div>
   </aside>
 
@@ -61,15 +61,37 @@
       <button id="menu-toggle" class="menu-toggle" aria-label="Menu">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <span class="mobile-brand">ND30 Formatter</span>
+      <span class="mobile-brand">VBFormatter</span>
     </header>
 
     <!-- ═══ VIEW: HOME ═══ -->
     <section id="view-home" class="view active">
       <div class="hero">
         <div class="hero-badge">Offline-First • Zero-Cost</div>
-        <h1 class="hero-title">Chuẩn hóa<br/><span class="gradient-text">Văn bản Hành chính</span></h1>
-        <p class="hero-desc">Tự động chuyển đổi văn bản sang định dạng chuẩn Nghị định 30/2020/NĐ-CP.<br/>Hỗ trợ DOCX, PDF, ảnh (OCR) và nhập văn bản trực tiếp.</p>
+        <h1 class="hero-title">Chuẩn hóa<br/><span class="gradient-text">Văn bản Hành chính &amp; Đảng</span></h1>
+        <p class="hero-desc">Tự động chuẩn hóa văn bản theo NĐ30/2020 (hành chính) và HD36/2018 (Đảng).<br/>Hỗ trợ DOCX, PDF, ảnh (OCR) và nhập văn bản trực tiếp.</p>
+
+        <!-- ── Standard Selector ── -->
+        <div class="standard-selector" id="standard-selector">
+          <button class="standard-btn active" data-standard="nd30" id="std-nd30">
+            <div class="standard-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="standard-info">
+              <span class="standard-name">Nghị định 30</span>
+              <span class="standard-desc">Văn bản hành chính</span>
+            </div>
+          </button>
+          <button class="standard-btn" data-standard="hd36" id="std-hd36">
+            <div class="standard-icon standard-icon-dang">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <div class="standard-info">
+              <span class="standard-name">Hướng dẫn 36</span>
+              <span class="standard-desc">Văn bản Đảng</span>
+            </div>
+          </button>
+        </div>
       </div>
 
       <div class="feature-grid">
@@ -100,16 +122,16 @@
 
       <div class="stats-bar">
         <div class="stat-item">
-          <span class="stat-value">15</span>
-          <span class="stat-label">Thành phần thể thức</span>
+          <span class="stat-value">2</span>
+          <span class="stat-label">Tiêu chuẩn</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">8+</span>
+          <span class="stat-value">24+</span>
           <span class="stat-label">Loại văn bản</span>
         </div>
         <div class="stat-item">
           <span class="stat-value">100%</span>
-          <span class="stat-label">Tuân thủ ND30</span>
+          <span class="stat-label">Đúng thể thức</span>
         </div>
       </div>
     </section>
@@ -319,16 +341,34 @@
                 <label for="review-loai-vb">Loại văn bản</label>
                 <select id="review-loai-vb">
                   <option value="">— Chọn —</option>
-                  <option value="QD">Quyết định</option>
-                  <option value="NQ">Nghị quyết</option>
-                  <option value="CV">Công văn</option>
-                  <option value="TB">Thông báo</option>
-                  <option value="TTR">Tờ trình</option>
-                  <option value="BC">Báo cáo</option>
-                  <option value="KH">Kế hoạch</option>
-                  <option value="CT">Chỉ thị</option>
-                  <option value="HD">Hướng dẫn</option>
-                  <option value="BB">Biên bản</option>
+                  <optgroup label="NĐ30 — Hành chính" id="optgroup-nd30">
+                    <option value="QD">Quyết định</option>
+                    <option value="NQ">Nghị quyết</option>
+                    <option value="CV">Công văn</option>
+                    <option value="TB">Thông báo</option>
+                    <option value="TTR">Tờ trình</option>
+                    <option value="BC">Báo cáo</option>
+                    <option value="KH">Kế hoạch</option>
+                    <option value="CT">Chỉ thị</option>
+                    <option value="HD">Hướng dẫn</option>
+                    <option value="BB">Biên bản</option>
+                  </optgroup>
+                  <optgroup label="HD36 — Văn bản Đảng" id="optgroup-hd36">
+                    <option value="D_NQ">Nghị quyết (Đảng)</option>
+                    <option value="D_CT">Chỉ thị (Đảng)</option>
+                    <option value="D_KL">Kết luận</option>
+                    <option value="D_QD">Quyết định (Đảng)</option>
+                    <option value="D_QDI">Quy định</option>
+                    <option value="D_QC">Quy chế</option>
+                    <option value="D_BC">Báo cáo (Đảng)</option>
+                    <option value="D_TTR">Tờ trình (Đảng)</option>
+                    <option value="D_TB">Thông báo (Đảng)</option>
+                    <option value="D_HD">Hướng dẫn (Đảng)</option>
+                    <option value="D_CTR">Chương trình</option>
+                    <option value="D_TT">Thông tri</option>
+                    <option value="D_CV">Công văn (Đảng)</option>
+                    <option value="D_BB">Biên bản (Đảng)</option>
+                  </optgroup>
                 </select>
               </div>
               <div class="form-group" id="section-ten-loai">
@@ -476,7 +516,7 @@
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
         <h2 class="result-title">Chuẩn hóa thành công!</h2>
-        <p class="result-subtitle">File DOCX đã được tạo đúng chuẩn ND30</p>
+        <p id="result-subtitle" class="result-subtitle">File DOCX đã được tạo đúng thể thức</p>
 
         <div id="result-details" class="result-details">
           <div class="detail-row">
@@ -513,31 +553,32 @@
     <!-- ═══ VIEW: GUIDE ═══ -->
     <section id="view-guide" class="view">
       <div class="view-header">
-        <h2>Hướng dẫn Thể thức ND30</h2>
-        <p class="view-subtitle">Nghị định số 30/2020/NĐ-CP ngày 05/3/2020 của Chính phủ</p>
+        <h2>Hướng dẫn Thể thức</h2>
+        <p class="view-subtitle">So sánh NĐ30/2020 (Hành chính) và HD36/2018 (Đảng)</p>
       </div>
 
-      <div class="guide-content">
+      <!-- Guide Tab Switcher -->
+      <div class="guide-tabs">
+        <button class="guide-tab active" data-guide="nd30" id="guide-tab-nd30">NĐ30 — Hành chính</button>
+        <button class="guide-tab" data-guide="hd36" id="guide-tab-hd36">HD36 — Văn bản Đảng</button>
+      </div>
+
+      <!-- ── Guide: ND30 ── -->
+      <div class="guide-content" id="guide-nd30">
         <div class="guide-card">
-          <h3>1. Quy định chung</h3>
+          <h3>1. Quy định chung — NĐ30</h3>
           <div class="guide-table">
             <div class="guide-row"><span>Khổ giấy</span><span>A4 (210 × 297 mm)</span></div>
             <div class="guide-row"><span>Phông chữ</span><span>Times New Roman, Unicode</span></div>
-            <div class="guide-row"><span>Màu chữ</span><span>Đen</span></div>
             <div class="guide-row"><span>Lề trên / dưới</span><span>20 mm</span></div>
             <div class="guide-row"><span>Lề trái</span><span>30 mm</span></div>
-            <div class="guide-row"><span>Lề phải</span><span>15 mm</span></div>
+            <div class="guide-row"><span>Lề phải</span><span>20 mm</span></div>
           </div>
         </div>
-
         <div class="guide-card">
-          <h3>2. Thành phần & Cỡ chữ</h3>
+          <h3>2. Thành phần &amp; Cỡ chữ</h3>
           <div class="guide-table guide-table-header">
-            <div class="guide-row header-row">
-              <span>Thành phần</span>
-              <span>Kiểu chữ</span>
-              <span>Cỡ</span>
-            </div>
+            <div class="guide-row header-row"><span>Thành phần</span><span>Kiểu chữ</span><span>Cỡ</span></div>
             <div class="guide-row"><span>Quốc hiệu</span><span>IN HOA, Đậm</span><span>13</span></div>
             <div class="guide-row"><span>Tiêu ngữ</span><span>Thường, Đậm</span><span>13</span></div>
             <div class="guide-row"><span>Tên cơ quan</span><span>IN HOA, Đậm</span><span>13</span></div>
@@ -550,10 +591,8 @@
             <div class="guide-row"><span>Họ tên người ký</span><span>Thường, Đậm</span><span>14</span></div>
             <div class="guide-row"><span>"Nơi nhận:"</span><span>Nghiêng, Đậm</span><span>12</span></div>
             <div class="guide-row"><span>DS nơi nhận</span><span>Thường</span><span>11</span></div>
-            <div class="guide-row"><span>Số trang</span><span>Thường</span><span>13</span></div>
           </div>
         </div>
-
         <div class="guide-card">
           <h3>3. Đường kẻ ngang</h3>
           <div class="guide-table">
@@ -562,14 +601,72 @@
             <div class="guide-row"><span>Dưới Trích yếu</span><span>1/3 – 1/2 dòng chữ</span></div>
           </div>
         </div>
-
         <div class="guide-card">
           <h3>4. Kỹ thuật soạn thảo</h3>
           <div class="guide-table">
             <div class="guide-row"><span>Thụt đầu dòng</span><span>1 – 1.27 cm</span></div>
             <div class="guide-row"><span>Khoảng cách đoạn</span><span>Tối thiểu 6pt</span></div>
             <div class="guide-row"><span>Căn lề nội dung</span><span>Justify (đều 2 bên)</span></div>
-            <div class="guide-row"><span>Giãn dòng</span><span>1.0 – 1.5 lines</span></div>
+            <div class="guide-row"><span>Giãn dòng</span><span>1.0 – 1.5 lines (~17pt)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Guide: HD36 ── -->
+      <div class="guide-content hidden" id="guide-hd36">
+        <div class="guide-card guide-card-dang">
+          <h3>1. Quy định chung — HD36</h3>
+          <div class="guide-table">
+            <div class="guide-row"><span>Khổ giấy</span><span>A4 (210 × 297 mm)</span></div>
+            <div class="guide-row"><span>Phông chữ</span><span>Times New Roman (TCVN 6909:2001)</span></div>
+            <div class="guide-row"><span>Lề trên / dưới</span><span>20 mm</span></div>
+            <div class="guide-row"><span>Lề trái</span><span>30 mm</span></div>
+            <div class="guide-row highlight-row"><span>Lề phải</span><span>15 mm (khác NĐ30: 20mm)</span></div>
+          </div>
+        </div>
+        <div class="guide-card guide-card-dang">
+          <h3>2. Thành phần &amp; Cỡ chữ</h3>
+          <div class="guide-table guide-table-header">
+            <div class="guide-row header-row"><span>Thành phần</span><span>Kiểu chữ</span><span>Cỡ</span></div>
+            <div class="guide-row highlight-row"><span>"ĐẢNG CỘNG SẢN VIỆT NAM"</span><span>IN HOA, Đậm</span><span>15</span></div>
+            <div class="guide-row"><span>Tên CQ cấp trên</span><span>IN HOA, Thường</span><span>14</span></div>
+            <div class="guide-row"><span>Tên CQ ban hành</span><span>IN HOA, Đậm</span><span>14</span></div>
+            <div class="guide-row highlight-row"><span>Dấu sao (*)</span><span>Căn giữa (thay gạch ngang)</span><span>14</span></div>
+            <div class="guide-row"><span>Số ký hiệu</span><span>Thường</span><span>14</span></div>
+            <div class="guide-row"><span>Địa danh, Ngày</span><span>Thường, Nghiêng</span><span>14</span></div>
+            <div class="guide-row"><span>Tên loại VB</span><span>IN HOA, Đậm</span><span>15–16</span></div>
+            <div class="guide-row"><span>Trích yếu (có tên loại)</span><span>Thường, Đậm</span><span>14–15</span></div>
+            <div class="guide-row"><span>Trích yếu (công văn)</span><span>Thường, Nghiêng</span><span>12</span></div>
+            <div class="guide-row"><span>Nội dung</span><span>Thường</span><span>14–15</span></div>
+            <div class="guide-row highlight-row"><span>Quyền hạn ký (T/M, K/T, T/L)</span><span>IN HOA, Đậm</span><span>14</span></div>
+            <div class="guide-row"><span>Chức vụ người ký</span><span>IN HOA, Thường</span><span>14</span></div>
+            <div class="guide-row"><span>Họ tên người ký</span><span>Thường, Đậm</span><span>14</span></div>
+            <div class="guide-row highlight-row"><span>"Nơi nhận:"</span><span>Thường, Gạch chân</span><span>14</span></div>
+            <div class="guide-row"><span>DS nơi nhận</span><span>Thường</span><span>12</span></div>
+          </div>
+        </div>
+        <div class="guide-card guide-card-dang">
+          <h3>3. Điểm khác biệt với NĐ30</h3>
+          <div class="guide-table guide-table-header">
+            <div class="guide-row header-row"><span>Yếu tố</span><span>HD36 (Đảng)</span><span>NĐ30 (HC)</span></div>
+            <div class="guide-row"><span>Góc phải</span><span>ĐẢNG CỘNG SẢN VN</span><span>Quốc hiệu + Tiêu ngữ</span></div>
+            <div class="guide-row"><span>Dưới CQ ban hành</span><span>Dấu sao (*)</span><span>Gạch ngang 1/3</span></div>
+            <div class="guide-row"><span>Quyền hạn ký</span><span>T/M, K/T, T/L</span><span>TM., KT., TL.</span></div>
+            <div class="guide-row"><span>"Nơi nhận:"</span><span>Gạch chân</span><span>Đậm + Nghiêng</span></div>
+            <div class="guide-row"><span>Căn cứ</span><span>Chữ đứng, gạch đầu dòng</span><span>Chữ nghiêng</span></div>
+            <div class="guide-row"><span>Line spacing</span><span>≥ 18pt</span><span>~17pt</span></div>
+            <div class="guide-row"><span>Lề phải</span><span>15mm</span><span>20mm</span></div>
+            <div class="guide-row"><span>Số ký hiệu</span><span>Số 15-NQ/TU</span><span>Số: 15/QĐ-UBND</span></div>
+            <div class="guide-row"><span>Khoảng chữ ký</span><span>4 dòng trống</span><span>2–3 dòng trống</span></div>
+          </div>
+        </div>
+        <div class="guide-card guide-card-dang">
+          <h3>4. Kỹ thuật soạn thảo</h3>
+          <div class="guide-table">
+            <div class="guide-row"><span>Thụt đầu dòng</span><span>~10 mm (~567 twips)</span></div>
+            <div class="guide-row"><span>Khoảng cách đoạn</span><span>≥ 6pt</span></div>
+            <div class="guide-row"><span>Căn lề nội dung</span><span>Justify (đều 2 bên)</span></div>
+            <div class="guide-row highlight-row"><span>Giãn dòng</span><span>≥ 18pt (EXACT)</span></div>
           </div>
         </div>
       </div>

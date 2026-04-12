@@ -1746,4 +1746,141 @@ body {
   .hero {
     padding: var(--space-xl) 0;
   }
+
+  .standard-selector {
+    flex-direction: column;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   STANDARD SELECTOR (NĐ30 / HD36)
+   ═══════════════════════════════════════════ */
+
+.standard-selector {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+  justify-content: center;
+}
+
+.standard-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border: 2px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-lowest);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.standard-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-fixed);
+}
+
+.standard-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-fixed);
+  box-shadow: 0 0 0 2px var(--primary-fixed-dim);
+}
+
+.standard-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--primary-fixed);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.standard-icon-dang {
+  background: #fce4ec;
+  color: #c62828;
+}
+
+.standard-btn.active .standard-icon-dang {
+  background: #ef9a9a;
+}
+
+.standard-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.standard-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--on-surface);
+}
+
+.standard-desc {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+}
+
+
+/* ═══════════════════════════════════════════
+   GUIDE TABS
+   ═══════════════════════════════════════════ */
+
+.guide-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+  border-bottom: 2px solid var(--outline-variant);
+  padding-bottom: 0;
+}
+
+.guide-tab {
+  padding: var(--space-sm) var(--space-lg);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--on-surface-variant);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+  font-family: var(--font-heading);
+}
+
+.guide-tab:hover {
+  color: var(--primary);
+}
+
+.guide-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.guide-content.hidden {
+  display: none;
+}
+
+
+/* ═══════════════════════════════════════════
+   HD36 GUIDE CARD ACCENT
+   ═══════════════════════════════════════════ */
+
+.guide-card-dang {
+  border-left: 4px solid #c62828;
+}
+
+.highlight-row {
+  background: #fff3e0 !important;
+  font-weight: 500;
+}
+
+.highlight-row span:last-child {
+  color: #e65100;
 }

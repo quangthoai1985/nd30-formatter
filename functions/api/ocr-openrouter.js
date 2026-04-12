@@ -20,14 +20,28 @@ const TEXT_MODELS = [
   'google/gemma-4-26b-a4b-it:free',        // Fallback: dùng chung với vision
 ];
 
-const VALID_LOAI = new Set(['QD', 'NQ', 'TB', 'TTR', 'BC', 'KH', 'CT', 'HD', 'BB', 'CV', 'GM', 'GGT', 'GNP']);
+const VALID_LOAI = new Set([
+  // NĐ30
+  'QD', 'NQ', 'TB', 'TTR', 'BC', 'KH', 'CT', 'HD', 'BB', 'CV', 'GM', 'GGT', 'GNP',
+  // HD36 (prefix D_)
+  'D_NQ', 'D_CT', 'D_KL', 'D_QD', 'D_QDI', 'D_QC', 'D_BC', 'D_TTR', 'D_TB',
+  'D_HD', 'D_CTR', 'D_TT', 'D_CV', 'D_BB',
+]);
 
 const SYSTEM_PROMPT =
-  'You are a high-precision Vietnamese administrative document structure extraction AI.\n' +
-  'Your ONLY task is to analyze the provided document image and extract structured data into JSON.\n' +
+  'You are a high-precision Vietnamese document structure extraction AI.\n' +
+  'You handle BOTH administrative documents (NĐ30) and Communist Party documents (HD36).\n' +
+  'Your ONLY task is to analyze the provided document and extract structured data into JSON.\n' +
   'CRITICAL: Output MUST be valid JSON only. No explanations. No markdown. No text outside JSON.';
 
-const USER_PROMPT = `Phân tích ảnh văn bản hành chính Việt Nam này và trích xuất CHÍNH XÁC vào JSON.
+const USER_PROMPT = `Phân tích văn bản Việt Nam này và trích xuất CHÍNH XÁC vào JSON.
+
+PHÂN BIỆT 2 LOẠI VĂN BẢN:
+A) VĂN BẢN HÀNH CHÍNH (NĐ30): Có "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM" + "Độc lập - Tự do - Hạnh phúc" ở góc phải. Số ký hiệu dạng "Số: 15/QĐ-UBND". Quyền hạn ký: TM., KT., TL.
+   → loai_van_ban = "QD|NQ|TB|TTR|BC|KH|CT|HD|BB|CV"
+
+B) VĂN BẢN ĐẢNG (HD36): Có "ĐẢNG CỘNG SẢN VIỆT NAM" ở góc phải. Dấu sao (*) dưới tên CQ. Số ký hiệu dạng "Số 15-NQ/HU". Quyền hạn ký: T/M, K/T, T/L (gạch chéo).
+   → loai_van_ban = "D_QD|D_NQ|D_CT|D_KL|D_QDI|D_QC|D_BC|D_TTR|D_TB|D_HD|D_CTR|D_TT|D_CV|D_BB"
 
 QUY TẮC BẮT BUỘC:
 1. KHÔNG tóm tắt, KHÔNG giải thích, KHÔNG thêm text nào ngoài JSON.
@@ -36,28 +50,29 @@ QUY TẮC BẮT BUỘC:
 4. KHÔNG bịa đặt nội dung không có trong ảnh.
 
 QUY TẮC PHÂN LOẠI VỊ TRÍ:
-- Góc trái trên: cơ quan chủ quản (dòng trên, nhỏ hơn) + cơ quan ban hành (dòng dưới, đậm hơn)
-- Góc phải trên: "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM" + "Độc lập - Tự do - Hạnh phúc"
-- Dòng "Số: .../..." phía trái → tách phần số và ký hiệu
-- Dòng "..., ngày ... tháng ... năm ..." phía phải → tách địa danh, ngày, tháng, năm
-- Dòng IN HOA ở giữa trang (VD: QUYẾT ĐỊNH, THÔNG BÁO) → tên loại văn bản
-- Dòng sau tên loại (thường có "Về việc" hoặc "V/v") → trích yếu
-- Dòng IN HOA giữa trích yếu và phần "Căn cứ" (VD: CHỦ TỊCH UBND...) → chức danh ban hành (không phải mọi văn bản đều có)
-- Các dòng bắt đầu bằng "Căn cứ..." → mảng căn cứ (mỗi căn cứ 1 phần tử, bỏ dấu ; cuối)
-- Dòng "Kính gửi:" → mảng kính gửi
-- Phần nội dung chính (sau căn cứ/kính gửi, trước phần ký) → giữ nguyên dấu xuống dòng
-- Khối ký: quyền hạn (TM./KT.), chức vụ, họ tên
-- Phần "Nơi nhận:" ở cuối → mảng nơi nhận (bỏ dấu - đầu dòng và ; cuối)
+- Góc trái trên: cơ quan chủ quản / cấp trên (dòng trên) + cơ quan ban hành (dòng dưới, đậm hơn)
+- Góc phải trên: Quốc hiệu (NĐ30) HOẶC "ĐẢNG CỘNG SẢN VIỆT NAM" (HD36)
+- Dòng "Số:..." hoặc "Số ..." → tách phần số và ký hiệu
+- Dòng "..., ngày ... tháng ... năm ..." → tách địa danh, ngày, tháng, năm
+- Dòng IN HOA ở giữa trang → tên loại văn bản
+- Dòng sau tên loại (có "Về việc" hoặc "V/v" hoặc dòng thường) → trích yếu
+- Dòng IN HOA giữa trích yếu và "Căn cứ" (NĐ30: CHỦ TỊCH UBND...) → chức danh ban hành
+- "Căn cứ..." → mảng căn cứ
+- "Kính gửi:" → mảng kính gửi
+- Nội dung chính → giữ nguyên xuống dòng
+- Khối ký: quyền hạn (TM./KT. hoặc T/M/K/T), chức vụ, họ tên
+- "Nơi nhận:" → mảng nơi nhận
 
 TRẢ VỀ ĐÚNG CẤU TRÚC JSON SAU:
 
 {
-  "loai_van_ban": "QD|NQ|TB|TTR|BC|KH|CT|HD|BB|CV",
+  "loai_van_ban": "QD|NQ|...|D_NQ|D_CT|...",
   "ten_loai_vb": "QUYẾT ĐỊNH",
   "co_quan_chu_quan": "",
   "co_quan_ban_hanh": "",
   "so": "",
   "ky_hieu": "",
+  "so_ky_hieu": "",
   "dia_danh": "",
   "ngay": "",
   "thang": "",

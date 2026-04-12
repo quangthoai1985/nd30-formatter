@@ -1,5 +1,5 @@
 /**
- * ND30 Formatter — Main Application (Zero-Cost Edition)
+ * VBFormatter — Main Application (NĐ30 + HD36)
  * SPA controller: routing, UI state, event handling
  * 100% client-side — không cần backend
  */
@@ -8,7 +8,9 @@ import './style.css';
 import { parseDocx, parsePdf, detectFileType, getMimeType } from './parsers.js';
 import { parseVBHC, contentItemsToText, textToContentItems } from './rule-parser.js';
 import { downloadND30Docx } from './nd30-docx.js';
+import { downloadHD36Docx } from './hd36-docx.js';
 import { getSchema } from './doc-schemas.js';
+import { getHD36Schema, isHD36Type } from './hd36-schemas.js';
 
 
 // ═══════════════════════════════════════════
@@ -379,8 +381,19 @@ async function tryTextAI(text) {
 // STATE
 // ═══════════════════════════════════════════
 
+const STANDARD_KEY = 'vbformatter_standard';
+
+function loadStandard() {
+  return localStorage.getItem(STANDARD_KEY) || 'nd30';
+}
+
+function saveStandard(std) {
+  localStorage.setItem(STANDARD_KEY, std);
+}
+
 const state = {
   currentView: 'home',
+  standard: loadStandard(),  // 'nd30' | 'hd36'
   selectedFile: null,
   selectedFileBuffer: null,
   parsedData: null,        // JSON from rule-parser
@@ -796,7 +809,7 @@ async function processText() {
  * Ẩn/hiện section, cập nhật label, placeholder, gợi ý nội dung.
  */
 function applyDocSchema(loai) {
-  const schema = getSchema(loai);
+  const schema = isHD36Type(loai) ? getHD36Schema(loai) : getSchema(loai);
 
   // ── Section: Tên loại VB ──
   const secTenLoai = $('section-ten-loai');
@@ -1040,7 +1053,10 @@ async function createDocxFromReview() {
     }
 
     state.parsedData = data;
-    const filename = await downloadND30Docx(data);
+    const isHD36 = isHD36Type(data.loai_van_ban) || state.standard === 'hd36';
+    const filename = isHD36
+      ? await downloadHD36Docx(data)
+      : await downloadND30Docx(data);
     showResult(data, filename);
 
   } catch (error) {
@@ -1061,12 +1077,23 @@ function showResult(data, filename) {
     'TTR': 'Tờ trình', 'BC': 'Báo cáo', 'KH': 'Kế hoạch',
     'CT': 'Chỉ thị', 'HD': 'Hướng dẫn', 'NQ': 'Nghị quyết',
     'BB': 'Biên bản',
+    // HD36
+    'D_NQ': 'Nghị quyết (Đảng)', 'D_CT': 'Chỉ thị (Đảng)', 'D_KL': 'Kết luận',
+    'D_QD': 'Quyết định (Đảng)', 'D_QDI': 'Quy định', 'D_QC': 'Quy chế',
+    'D_BC': 'Báo cáo (Đảng)', 'D_TTR': 'Tờ trình (Đảng)', 'D_TB': 'Thông báo (Đảng)',
+    'D_HD': 'Hướng dẫn (Đảng)', 'D_CTR': 'Chương trình', 'D_TT': 'Thông tri',
+    'D_CV': 'Công văn (Đảng)', 'D_BB': 'Biên bản (Đảng)',
   };
 
-  $('result-type').textContent = typeMap[data.loai_van_ban?.toUpperCase()] || data.ten_loai_vb || data.loai_van_ban || '—';
+  const isHD36Doc = isHD36Type(data.loai_van_ban) || state.standard === 'hd36';
+  $('result-type').textContent = typeMap[data.loai_van_ban?.toUpperCase()] || typeMap[data.loai_van_ban] || data.ten_loai_vb || data.loai_van_ban || '—';
   $('result-org').textContent = data.co_quan_ban_hanh || '—';
-  $('result-number').textContent = data.so && data.ky_hieu ? `${data.so}/${data.ky_hieu}` : '—';
+  $('result-number').textContent = data.so && data.ky_hieu ? `${data.so}/${data.ky_hieu}` : (data.so_ky_hieu || '—');
   $('result-summary').textContent = data.trich_yeu || '—';
+  const subtitleEl = $('result-subtitle');
+  if (subtitleEl) subtitleEl.textContent = isHD36Doc
+    ? 'File DOCX đã được tạo đúng thể thức HD36 (Văn bản Đảng)'
+    : 'File DOCX đã được tạo đúng thể thức NĐ30 (Hành chính)';
 
   navigateTo('result');
   showToast('Đã tạo file DOCX thành công!', 'success');
@@ -1138,7 +1165,9 @@ function initEventListeners() {
   // Download again
   $('btn-download')?.addEventListener('click', () => {
     if (state.parsedData) {
-      downloadND30Docx(state.parsedData);
+      const isHD36 = isHD36Type(state.parsedData.loai_van_ban) || state.standard === 'hd36';
+      if (isHD36) downloadHD36Docx(state.parsedData);
+      else downloadND30Docx(state.parsedData);
     }
   });
 
@@ -1185,6 +1214,28 @@ function initEventListeners() {
   // Render text panel for text view on load
   renderTextPriorityList('text');
   updateModelPanelSummary('text');
+
+  // ── Standard Selector (NĐ30 / HD36) ──
+  $$('.standard-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const std = btn.dataset.standard;
+      state.standard = std;
+      saveStandard(std);
+      $$('.standard-btn').forEach(b => b.classList.toggle('active', b.dataset.standard === std));
+    });
+  });
+  // Restore saved standard on load
+  $$('.standard-btn').forEach(b => b.classList.toggle('active', b.dataset.standard === state.standard));
+
+  // ── Guide Tabs ──
+  $$('.guide-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const guide = tab.dataset.guide;
+      $$('.guide-tab').forEach(t => t.classList.toggle('active', t.dataset.guide === guide));
+      $('guide-nd30')?.classList.toggle('hidden', guide !== 'nd30');
+      $('guide-hd36')?.classList.toggle('hidden', guide !== 'hd36');
+    });
+  });
 }
 
 
@@ -1198,7 +1249,7 @@ function init() {
   initEventListeners();
   navigateTo('home');
 
-  console.log('🏛️ ND30 Formatter initialized (Zero-Cost Edition)');
+  console.log('📄 VBFormatter initialized — NĐ30 + HD36');
 }
 
 // Start

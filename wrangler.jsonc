@@ -1,9 +1,9 @@
 {
-  // ND30 Formatter — Cloudflare Pages Configuration
-  // Deploy:     npx wrangler pages deploy dist --project-name nd30-formatter
-  // Set secret: npx wrangler pages secret put OPENROUTER_API_KEY --project-name nd30-formatter
+  // VBFormatter — Cloudflare Pages Configuration
+  // Deploy:     npx wrangler pages deploy dist --project-name vbformatter
+  // Set secret: npx wrangler pages secret put OPENROUTER_API_KEY --project-name vbformatter
   "$schema": "https://json.schemastore.org/wrangler",
-  "name": "nd30-formatter",
+  "name": "vbformatter",
   "compatibility_date": "2024-12-01",
 
   "d1_databases": [
