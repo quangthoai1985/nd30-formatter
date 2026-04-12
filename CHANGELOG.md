@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## [2.1.0] — 2026-04-13
+
+### Tổng quan
+Cập nhật tính năng chọn model AI từ danh sách trực tiếp trên giao diện, thay vì phải vào OpenRouter copy model ID.
+
+---
+
+### Tính năng mới
+
+#### Fetch danh sách model Free từ OpenRouter
+- Thêm endpoint `/api/models` (`functions/api/models.js`) gọi OpenRouter API `/v1/models`
+- Trả về danh sách model free, cache 5 phút trong Cloudflare KV
+- Frontend gọi API để lấy danh sách model free mới nhất
+
+#### Chọn Model Free trực tiếp trên giao diện
+- Khi upload DOCX hoặc vào trang "Nhập Text": dropdown hiển thị danh sách model free từ OpenRouter
+- User chọn model → bấm "Dùng model đã chọn" → model được thêm vào danh sách ưu tiên
+- Cache localStorage 5 phút, không block UI khi load
+
+#### Xử lý lỗi kết nối AI
+- Khi `tryBackendOCR()` hoặc `tryTextAI()` thất bại → hiển thị Toast error trên màn hình
+- Người dùng biết ngay model nào thất bại, lý do gì
+
+---
+
+### Thay đổi kỹ thuật
+
+#### Files mới
+- `functions/api/models.js` — endpoint lấy danh sách model free từ OpenRouter
+
+#### Files chỉnh sửa chính
+- `src/main.js`:
+  - Thêm `fetchFreeModels()`, `getFreeModelsSync()`, `setCachedFreeModels()`
+  - `renderTextPriorityList()` thêm param `freeModels` và dropdown chọn
+  - `showUploadModelPanel()` nhận `freeModels` param
+  - `init()` pre-fetch models không blocking
+  - `tryBackendOCR()`, `tryTextAI()` thêm showToast khi lỗi
+- `src/style.css`:
+  - Thêm `.model-free-section`, `.model-free-select`, `.btn-use-model`
+- `index.html`: giữ nguyên cấu trúc HTML
+
+---
+
+### Bug Fix
+- Fix lỗi `await` trong function không async ở `initEventListeners()`
+- Skip fetch `/api/models` khi chạy localhost (không có Cloudflare Worker)
+
+---
+
 ## [2.0.0] — 2026-04-12
 
 ### Tổng quan

@@ -74,6 +74,80 @@ function setTextModelList(list) {
 }
 
 // ─────────────────────────────────────────────
+// FETCH FREE MODELS FROM OPENROUTER
+// ─────────────────────────────────────────────
+
+const MODELS_CACHE_KEY = 'nd30_free_models';
+const MODELS_CACHE_TTL = 5 * 60 * 1000;
+
+let cachedFreeModels = null;
+let cachedModelsTs = 0;
+
+async function fetchFreeModels() {
+  if (cachedFreeModels && (Date.now() - cachedModelsTs) < MODELS_CACHE_TTL) {
+    return cachedFreeModels;
+  }
+
+  try {
+    // Skip fetch khi chạy localhost dev (không có Cloudflare Worker)
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocalhost) {
+      return getFreeModelsSync() || null;
+    }
+
+    const res = await fetch('/api/models');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Lỗi API: ${res.status}`);
+    }
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.models)) {
+      throw new Error(data.error || 'Không nhận được danh sách model hợp lệ');
+    }
+    cachedFreeModels = data.models;
+    cachedModelsTs = data.ts || Date.now();
+    localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify({ models: cachedFreeModels, ts: cachedModelsTs }));
+    return cachedFreeModels;
+  } catch (err) {
+    console.warn('fetchFreeModels error:', err);
+    const cached = localStorage.getItem(MODELS_CACHE_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.models) {
+          cachedFreeModels = parsed.models;
+          cachedModelsTs = parsed.ts || 0;
+          return cachedFreeModels;
+        }
+      } catch {}
+    }
+    return null;
+  }
+}
+
+function getFreeModelsSync() {
+  if (cachedFreeModels) return cachedFreeModels;
+  const cached = localStorage.getItem(MODELS_CACHE_KEY);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (parsed.models && (Date.now() - (parsed.ts || 0)) < MODELS_CACHE_TTL) {
+        cachedFreeModels = parsed.models;
+        cachedModelsTs = parsed.ts || 0;
+        return cachedFreeModels;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+function setCachedFreeModels(models) {
+  cachedFreeModels = models;
+  cachedModelsTs = Date.now();
+  localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify({ models, ts: cachedModelsTs }));
+}
+
+// ─────────────────────────────────────────────
 // Model Panel UI
 // ─────────────────────────────────────────────
 
@@ -100,14 +174,28 @@ function renderVisionRadioList() {
   });
 }
 
-function renderTextPriorityList(panelKey) {
+function renderTextPriorityList(panelKey, freeModels = null) {
   // panelKey: 'upload' | 'text'
+  // freeModels: optional list from API to display as selectable options
   const listId = panelKey === 'upload' ? 'text-priority-list-upload' : 'text-priority-list-text';
   const container = $(listId);
   if (!container) return;
   const models = getTextModelList();
 
-  container.innerHTML = models.map((id, i) => `
+  let html = '';
+
+  if (freeModels && freeModels.length > 0) {
+    html += `<div class="model-free-section">
+      <p class="model-section-hint">Model Free từ OpenRouter:</p>
+      <select class="model-free-select" id="model-free-select-${panelKey}">
+        <option value="">-- Chọn model free --</option>
+        ${freeModels.map(m => `<option value="${m.id}">${m.name} (${m.id})</option>`).join('')}
+      </select>
+      <button type="button" class="btn-secondary btn-use-model" data-panel="${panelKey}">Dùng model đã chọn</button>
+    </div>`;
+  }
+
+  html += models.map((id, i) => `
     <div class="model-priority-item" data-model="${id}">
       <span class="model-priority-num">${i + 1}</span>
       <span class="model-priority-id" title="${id}">${id}</span>
@@ -115,18 +203,38 @@ function renderTextPriorityList(panelKey) {
     </div>
   `).join('');
 
+  container.innerHTML = html;
+
   container.querySelectorAll('.model-priority-remove').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.remove;
       const list = getTextModelList().filter(m => m !== id);
       if (list.length === 0) { showToast('Phải có ít nhất 1 model', 'error'); return; }
       setTextModelList(list);
-      renderTextPriorityList('upload');
-      renderTextPriorityList('text');
+      renderTextPriorityList(panelKey, freeModels);
+      renderTextPriorityList(panelKey === 'upload' ? 'text' : 'upload', freeModels);
       updateModelPanelSummary('upload');
       updateModelPanelSummary('text');
     });
   });
+
+  const useBtn = container.querySelector('.btn-use-model');
+  if (useBtn) {
+    useBtn.addEventListener('click', () => {
+      const select = $(`model-free-select-${panelKey}`);
+      const modelId = select?.value;
+      if (!modelId) { showToast('Hãy chọn một model', 'error'); return; }
+      const list = getTextModelList();
+      if (list.includes(modelId)) { showToast('Model đã có trong danh sách', 'error'); return; }
+      list.unshift(modelId);
+      setTextModelList(list);
+      renderTextPriorityList('upload', freeModels);
+      renderTextPriorityList('text', freeModels);
+      updateModelPanelSummary('upload');
+      updateModelPanelSummary('text');
+      showToast(`Đã thêm model: ${modelId}`, 'success');
+    });
+  }
 }
 
 function updateModelPanelSummary(panelKey) {
@@ -147,7 +255,7 @@ function updateModelPanelSummary(panelKey) {
   }
 }
 
-function showUploadModelPanel(fileType) {
+function showUploadModelPanel(fileType, freeModels = null) {
   const panel = $('model-panel-upload');
   if (!panel) return;
 
@@ -158,7 +266,7 @@ function showUploadModelPanel(fileType) {
   if (isVision) {
     renderVisionRadioList();
   } else {
-    renderTextPriorityList('upload');
+    renderTextPriorityList('upload', freeModels);
   }
   updateModelPanelSummary('upload');
   panel.classList.remove('hidden');
@@ -179,8 +287,9 @@ function setupAddModelButton(panelKey) {
     list.push(val);
     setTextModelList(list);
     input.value = '';
-    renderTextPriorityList('upload');
-    renderTextPriorityList('text');
+    const freeModels = getFreeModelsSync();
+    renderTextPriorityList('upload', freeModels);
+    renderTextPriorityList('text', freeModels);
     updateModelPanelSummary('upload');
     updateModelPanelSummary('text');
   };
@@ -332,6 +441,7 @@ async function tryBackendOCR(fileBuffer, fileName) {
 
   } catch (err) {
     console.error('tryBackendOCR error:', err);
+    showToast(`Lỗi kết nối AI: ${err.message}`, 'error');
     return null;
   }
 }
@@ -373,6 +483,7 @@ async function tryTextAI(text) {
 
   } catch (err) {
     console.error('tryTextAI error:', err);
+    showToast(`Lỗi kết nối AI: ${err.message}`, 'error');
     return null;
   }
 }
@@ -534,7 +645,7 @@ function setupDropZone() {
   });
 }
 
-function handleFileSelected(file) {
+async function handleFileSelected(file) {
   // Validate file size (max 10MB)
   if (file.size > 10 * 1024 * 1024) {
     showToast('File quá lớn. Giới hạn 10MB.', 'error');
@@ -564,8 +675,9 @@ function handleFileSelected(file) {
   $('btn-process-file')?.classList.remove('hidden');
   $('btn-process-file').disabled = false;
 
-  // Show model selector
-  showUploadModelPanel(fileType);
+  // Show model selector with free models from API
+  const freeModels = getFreeModelsSync() || (await fetchFreeModels());
+  showUploadModelPanel(fileType, freeModels);
 }
 
 function clearSelectedFile() {
@@ -1212,7 +1324,8 @@ function initEventListeners() {
   setupAddModelButton('upload');
   setupAddModelButton('text');
   // Render text panel for text view on load
-  renderTextPriorityList('text');
+  const freeModelsInit = getFreeModelsSync();
+  renderTextPriorityList('text', freeModelsInit);
   updateModelPanelSummary('text');
 
   // ── Standard Selector (NĐ30 / HD36) ──
@@ -1243,10 +1356,14 @@ function initEventListeners() {
 // INIT
 // ═══════════════════════════════════════════
 
-function init() {
+async function init() {
   setupDropZone();
   setupTextInput();
   initEventListeners();
+
+  // Pre-fetch free models in background (non-blocking)
+  fetchFreeModels().catch(() => {});
+
   navigateTo('home');
 
   console.log('📄 VBFormatter initialized — NĐ30 + HD36');

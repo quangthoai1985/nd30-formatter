@@ -1562,6 +1562,48 @@ body {
   margin-bottom: var(--space-md);
 }
 
+.model-free-section {
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px dashed var(--outline-variant);
+}
+
+.model-free-select {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  font-size: 0.8125rem;
+  font-family: monospace;
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  outline: none;
+  cursor: pointer;
+  margin-bottom: var(--space-sm);
+  transition: border-color var(--duration-fast);
+}
+
+.model-free-select:focus {
+  border-color: var(--primary);
+}
+
+.btn-use-model {
+  height: 36px;
+  padding: 0 var(--space-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity var(--duration-fast);
+}
+
+.btn-use-model:hover { opacity: 0.88; }
+
 .model-add-input {
   flex: 1;
   height: 36px;
