@@ -4,20 +4,18 @@
  * Chiến lược: thử model free trước → fallback model trả phí rẻ nếu lỗi 429/503.
  */
 
-// Model có vision (dùng cho PDF/ảnh) — ưu tiên model trả phí rẻ + nhanh
+// Model có vision (dùng cho PDF/ảnh) — CHỈ dùng model thực sự hỗ trợ vision
 const VISION_MODELS = [
   'google/gemini-3.1-flash-lite-preview',   // $0.25/M, vision, ổn định
-  'qwen/qwen3.5-9b',                         // $0.05/M, vision, rẻ nhất
   'google/gemini-3-flash-preview',           // $0.50/M, vision, mạnh hơn
-  'qwen/qwen3.6-plus',                       // $0.80/M, vision
-  'google/gemma-4-26b-a4b-it:free',          // Free, vision, fallback
-  'google/gemma-4-31b-a4b-it:free',          // Free, vision, fallback
+  'google/gemini-3.1-pro-preview',           // $1.00/M, vision, mạnh nhất
+  'google/gemma-4-26b-a4b-it:free',          // Free, text only - fallback cuối
 ];
 
 // Model text (dùng cho DOCX và text nhập tay — ưu tiên trả phí rẻ + nhanh)
 const TEXT_MODELS = [
   'google/gemini-3.1-flash-lite-preview',   // $0.25/M, nhanh
-  'qwen/qwen3.5-9b',                         // $0.05/M, rẻ nhất
+  'qwen/qwen3.5-9b',                         // $0.05/M, text only
   'google/gemini-3-flash-preview',           // $0.50/M, mạnh hơn
   'nvidia/nemotron-nano-12b-v2-vl:free',   // Free, fallback
   'google/gemma-4-26b-a4b-it:free',          // Free, fallback
@@ -172,6 +170,11 @@ export async function onRequestPost({ request, env }) {
           lastError = `Model ${model} lỗi ${response.status}: ${errText.substring(0, 300)}`;
           // 404 = model không tồn tại, không cần retry
           if (response.status === 404) continue;
+          // "does not support image input" = model không phải vision, skip
+          if (errText.includes('does not support image input') || errText.includes('image_url')) {
+            console.log(`Model ${model} không hỗ trợ vision, skip`);
+            continue;
+          }
           continue;
         }
 

@@ -18,15 +18,12 @@ import { getHD36Schema, isHD36Type } from './hd36-schemas.js';
 // ═══════════════════════════════════════════
 
 const VISION_MODEL_DEFS = [
-  // ── Free ──
-  { id: 'google/gemma-4-26b-a4b-it:free',        name: 'Gemma 4 26B',             free: true },
-  { id: 'google/gemma-4-31b-it:free',             name: 'Gemma 4 31B',             free: true },
-  // ── Trả phí (sắp xếp theo giá tăng dần) ──
-  { id: 'qwen/qwen3.5-9b',                        name: 'Qwen 3.5 9B',             free: false, price: '$0.05/M' },
+  // ── Trả phí (CHỈ những model thực sự hỗ trợ vision) ──
   { id: 'google/gemini-3.1-flash-lite-preview',   name: 'Gemini 3.1 Flash Lite',   free: false, price: '$0.25/M' },
-  { id: 'qwen/qwen3.5-plus-02-15',                name: 'Qwen 3.5 Plus',           free: false, price: '$0.26/M' },
   { id: 'google/gemini-3-flash-preview',           name: 'Gemini 3 Flash',          free: false, price: '$0.50/M' },
-  { id: 'qwen/qwen3.6-plus',                      name: 'Qwen 3.6 Plus',           free: false, price: '$0.80/M' },
+  { id: 'google/gemini-3.1-pro-preview',           name: 'Gemini 3.1 Pro',           free: false, price: '$1.00/M' },
+  // ── Free (chỉ dùng làm fallback cuối) ──
+  { id: 'google/gemma-4-26b-a4b-it:free',          name: 'Gemma 4 26B (text only)',  free: true },
 ];
 
 const DEFAULT_TEXT_MODEL_LIST = [
@@ -39,9 +36,8 @@ const DEFAULT_TEXT_MODEL_LIST = [
 
 const TEXT_MODEL_OPTIONS = [
   { id: 'google/gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', price: '$0.25/M' },
-  { id: 'qwen/qwen3.5-9b',                        name: 'Qwen 3.5 9B',            price: '$0.05/M' },
+  { id: 'qwen/qwen3.5-9b',                        name: 'Qwen 3.5 9B (text only)', price: '$0.05/M' },
   { id: 'google/gemini-3-flash-preview',          name: 'Gemini 3 Flash',         price: '$0.50/M' },
-  { id: 'qwen/qwen3.6-plus',                      name: 'Qwen 3.6 Plus',          price: '$0.80/M' },
 ];
 
 const MODEL_PREFS_KEY = 'nd30_model_prefs';
@@ -60,7 +56,7 @@ function saveModelPrefs(prefs) {
 
 function getVisionModel() {
   const p = loadModelPrefs();
-  return (p?.visionModel) || VISION_MODEL_DEFS[2].id; // default: Gemini 3.1 Flash Lite
+  return (p?.visionModel) || VISION_MODEL_DEFS[0].id; // default: Gemini 3.1 Flash Lite
 }
 
 function getTextModelList() {
