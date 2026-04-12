@@ -47,6 +47,14 @@ Cập nhật tính năng chọn model AI từ danh sách trực tiếp trên gia
 - Fix lỗi `await` trong function không async ở `initEventListeners()`
 - Skip fetch `/api/models` khi chạy localhost (không có Cloudflare Worker)
 
+### Khắc phục hiệu suất Model Free
+- Đổi `DEFAULT_TEXT_MODEL_LIST` từ toàn model Free → ưu tiên model trả phí rẻ và nhanh:
+  1. `google/gemini-3.1-flash-lite-preview` ($0.25/M) - nhanh, ổn định
+  2. `qwen/qwen3.5-9b` ($0.05/M) - rẻ nhất
+  3. `google/gemini-3-flash-preview` ($0.50/M) - mạnh hơn
+  4-5. Fallback model Free: `nemotron-nano`, `gemma-4-26b`
+- Lý do: Model Free của OpenRouter phản hồi rất chậm hoặc không phản hồi do queue đông, trong khi đã nạp tiền thanh toán
+
 ---
 
 ## [2.0.0] — 2026-04-12
