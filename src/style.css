@@ -1174,7 +1174,19 @@ body {
 
 .form-section .form-grid {
   flex: 1;
-  align-content: start;
+  align-items: stretch;
+}
+
+.form-row-2 .form-section .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  align-items: stretch;
+  min-height: 0;
+}
+
+.form-row-2 .form-section .form-grid .form-group {
+  min-height: 80px;
 }
 
 .form-section-title {

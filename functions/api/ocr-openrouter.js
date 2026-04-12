@@ -4,20 +4,23 @@
  * Chiến lược: thử model free trước → fallback model trả phí rẻ nếu lỗi 429/503.
  */
 
-// Model có vision (dùng cho PDF/ảnh) — fallback khi frontend không gửi preferredModel
+// Model có vision (dùng cho PDF/ảnh) — ưu tiên model trả phí rẻ + nhanh
 const VISION_MODELS = [
-  'google/gemma-4-26b-a4b-it:free',        // Free, vision, tiếng Việt tốt
-  'google/gemma-4-31b-it:free',             // Free, vision, backup
-  'qwen/qwen3.5-9b',                       // Rẻ nhất: $0.05/M, vision
-  'google/gemini-3.1-flash-lite-preview',   // $0.25/M, ổn định
-  'google/gemini-3-flash-preview',          // $0.50/M, mạnh
+  'google/gemini-3.1-flash-lite-preview',   // $0.25/M, vision, ổn định
+  'qwen/qwen3.5-9b',                         // $0.05/M, vision, rẻ nhất
+  'google/gemini-3-flash-preview',           // $0.50/M, vision, mạnh hơn
+  'qwen/qwen3.6-plus',                       // $0.80/M, vision
+  'google/gemma-4-26b-a4b-it:free',          // Free, vision, fallback
+  'google/gemma-4-31b-a4b-it:free',          // Free, vision, fallback
 ];
 
-// Model text (dùng cho DOCX và text nhập tay — không cần vision, free)
+// Model text (dùng cho DOCX và text nhập tay — ưu tiên trả phí rẻ + nhanh)
 const TEXT_MODELS = [
-  'nvidia/nemotron-nano-12b-v2-vl:free',   // Free, tiếng Việt tốt
-  'nvidia/nemotron-3-nano-30b-a3b:free',   // Free, backup
-  'google/gemma-4-26b-a4b-it:free',        // Fallback: dùng chung với vision
+  'google/gemini-3.1-flash-lite-preview',   // $0.25/M, nhanh
+  'qwen/qwen3.5-9b',                         // $0.05/M, rẻ nhất
+  'google/gemini-3-flash-preview',           // $0.50/M, mạnh hơn
+  'nvidia/nemotron-nano-12b-v2-vl:free',   // Free, fallback
+  'google/gemma-4-26b-a4b-it:free',          // Free, fallback
 ];
 
 const VALID_LOAI = new Set([
