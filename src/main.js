@@ -30,9 +30,18 @@ const VISION_MODEL_DEFS = [
 ];
 
 const DEFAULT_TEXT_MODEL_LIST = [
+  'google/gemini-3.1-flash-lite-preview',
+  'qwen/qwen3.5-9b',
+  'google/gemini-3-flash-preview',
   'nvidia/nemotron-nano-12b-v2-vl:free',
-  'nvidia/nemotron-3-nano-30b-a3b:free',
   'google/gemma-4-26b-a4b-it:free',
+];
+
+const TEXT_MODEL_OPTIONS = [
+  { id: 'google/gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', price: '$0.25/M' },
+  { id: 'qwen/qwen3.5-9b',                        name: 'Qwen 3.5 9B',            price: '$0.05/M' },
+  { id: 'google/gemini-3-flash-preview',          name: 'Gemini 3 Flash',         price: '$0.50/M' },
+  { id: 'qwen/qwen3.6-plus',                      name: 'Qwen 3.6 Plus',          price: '$0.80/M' },
 ];
 
 const MODEL_PREFS_KEY = 'nd30_model_prefs';
@@ -175,26 +184,29 @@ function renderVisionRadioList() {
 }
 
 function renderTextPriorityList(panelKey, freeModels = null) {
-  // panelKey: 'upload' | 'text'
-  // freeModels: optional list from API to display as selectable options
   const listId = panelKey === 'upload' ? 'text-priority-list-upload' : 'text-priority-list-text';
   const container = $(listId);
   if (!container) return;
   const models = getTextModelList();
 
-  let html = '';
+  const allOptions = [
+    ...TEXT_MODEL_OPTIONS.map(m => ({ id: m.id, name: m.name, price: m.price })),
+    ...(freeModels || []).filter(m => !TEXT_MODEL_OPTIONS.find(o => o.id === m.id))
+      .map(m => ({ id: m.id, name: m.name, price: 'Free' })),
+  ];
 
-  if (freeModels && freeModels.length > 0) {
-    html += `<div class="model-free-section">
-      <p class="model-section-hint">Model Free từ OpenRouter:</p>
-      <select class="model-free-select" id="model-free-select-${panelKey}">
-        <option value="">-- Chọn model free --</option>
-        ${freeModels.map(m => `<option value="${m.id}">${m.name} (${m.id})</option>`).join('')}
-      </select>
-      <button type="button" class="btn-secondary btn-use-model" data-panel="${panelKey}">Dùng model đã chọn</button>
-    </div>`;
-  }
+  const optionsHtml = allOptions.map(m => `<option value="${m.id}">${m.name} (${m.price})</option>`).join('');
 
+  let html = `<div class="model-select-section">
+    <p class="model-section-hint">Chọn model để thêm vào danh sách ưu tiên:</p>
+    <select class="model-select" id="model-select-${panelKey}">
+      <option value="">-- Chọn model --</option>
+      ${optionsHtml}
+    </select>
+    <button type="button" class="btn-add-model" data-panel="${panelKey}">+ Thêm vào danh sách</button>
+  </div>`;
+
+  html += `<div class="model-priority-header">Danh sách ưu tiên (thử từ trên xuống):</div>`;
   html += models.map((id, i) => `
     <div class="model-priority-item" data-model="${id}">
       <span class="model-priority-num">${i + 1}</span>
@@ -211,28 +223,30 @@ function renderTextPriorityList(panelKey, freeModels = null) {
       const list = getTextModelList().filter(m => m !== id);
       if (list.length === 0) { showToast('Phải có ít nhất 1 model', 'error'); return; }
       setTextModelList(list);
-      renderTextPriorityList(panelKey, freeModels);
-      renderTextPriorityList(panelKey === 'upload' ? 'text' : 'upload', freeModels);
+      const fm = getFreeModelsSync();
+      renderTextPriorityList(panelKey, fm);
+      renderTextPriorityList(panelKey === 'upload' ? 'text' : 'upload', fm);
       updateModelPanelSummary('upload');
       updateModelPanelSummary('text');
     });
   });
 
-  const useBtn = container.querySelector('.btn-use-model');
-  if (useBtn) {
-    useBtn.addEventListener('click', () => {
-      const select = $(`model-free-select-${panelKey}`);
+  const addBtn = container.querySelector('.btn-add-model');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const select = $(`model-select-${panelKey}`);
       const modelId = select?.value;
       if (!modelId) { showToast('Hãy chọn một model', 'error'); return; }
       const list = getTextModelList();
       if (list.includes(modelId)) { showToast('Model đã có trong danh sách', 'error'); return; }
       list.unshift(modelId);
       setTextModelList(list);
-      renderTextPriorityList('upload', freeModels);
-      renderTextPriorityList('text', freeModels);
+      const fm = getFreeModelsSync();
+      renderTextPriorityList('upload', fm);
+      renderTextPriorityList('text', fm);
       updateModelPanelSummary('upload');
       updateModelPanelSummary('text');
-      showToast(`Đã thêm model: ${modelId}`, 'success');
+      showToast(`Đã thêm: ${modelId}`, 'success');
     });
   }
 }
