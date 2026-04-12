@@ -9,22 +9,210 @@ import { parseDocx, parsePdf, detectFileType, getMimeType } from './parsers.js';
 import { parseVBHC, contentItemsToText, textToContentItems } from './rule-parser.js';
 import { downloadND30Docx } from './nd30-docx.js';
 import { getSchema } from './doc-schemas.js';
-import PizZip from 'pizzip';
 
 
 // ═══════════════════════════════════════════
-// BACKEND OCR HELPERS (MinerU 2.5 Pro)
+// MODEL PREFERENCES
+// ═══════════════════════════════════════════
+
+const VISION_MODEL_DEFS = [
+  // ── Free ──
+  { id: 'google/gemma-4-26b-a4b-it:free',        name: 'Gemma 4 26B',             free: true },
+  { id: 'google/gemma-4-31b-it:free',             name: 'Gemma 4 31B',             free: true },
+  // ── Trả phí (sắp xếp theo giá tăng dần) ──
+  { id: 'qwen/qwen3.5-9b',                        name: 'Qwen 3.5 9B',             free: false, price: '$0.05/M' },
+  { id: 'google/gemini-3.1-flash-lite-preview',   name: 'Gemini 3.1 Flash Lite',   free: false, price: '$0.25/M' },
+  { id: 'qwen/qwen3.5-plus-02-15',                name: 'Qwen 3.5 Plus',           free: false, price: '$0.26/M' },
+  { id: 'google/gemini-3-flash-preview',           name: 'Gemini 3 Flash',          free: false, price: '$0.50/M' },
+  { id: 'qwen/qwen3.6-plus',                      name: 'Qwen 3.6 Plus',           free: false, price: '$0.80/M' },
+];
+
+const DEFAULT_TEXT_MODEL_LIST = [
+  'nvidia/nemotron-nano-12b-v2-vl:free',
+  'nvidia/nemotron-3-nano-30b-a3b:free',
+  'google/gemma-4-26b-a4b-it:free',
+];
+
+const MODEL_PREFS_KEY = 'nd30_model_prefs';
+
+function loadModelPrefs() {
+  try {
+    const raw = localStorage.getItem(MODEL_PREFS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function saveModelPrefs(prefs) {
+  try { localStorage.setItem(MODEL_PREFS_KEY, JSON.stringify(prefs)); } catch {}
+}
+
+function getVisionModel() {
+  const p = loadModelPrefs();
+  return (p?.visionModel) || VISION_MODEL_DEFS[2].id; // default: Gemini 3.1 Flash Lite
+}
+
+function getTextModelList() {
+  const p = loadModelPrefs();
+  return (Array.isArray(p?.textModels) && p.textModels.length > 0)
+    ? p.textModels
+    : [...DEFAULT_TEXT_MODEL_LIST];
+}
+
+function setVisionModel(modelId) {
+  const p = loadModelPrefs() || {};
+  p.visionModel = modelId;
+  saveModelPrefs(p);
+}
+
+function setTextModelList(list) {
+  const p = loadModelPrefs() || {};
+  p.textModels = list;
+  saveModelPrefs(p);
+}
+
+// ─────────────────────────────────────────────
+// Model Panel UI
+// ─────────────────────────────────────────────
+
+function renderVisionRadioList() {
+  const container = $('vision-radio-list');
+  if (!container) return;
+  const selected = getVisionModel();
+  container.innerHTML = VISION_MODEL_DEFS.map(m => `
+    <label class="model-radio-item">
+      <input type="radio" name="vision-model" value="${m.id}" ${m.id === selected ? 'checked' : ''}>
+      <div class="model-radio-info">
+        <span class="model-radio-name">${m.name}</span>
+        <span class="model-radio-id">${m.id}</span>
+      </div>
+      <span class="model-badge ${m.free ? 'model-badge-free' : 'model-badge-paid'}">${m.free ? 'Free' : (m.price || 'Trả phí')}</span>
+    </label>
+  `).join('');
+
+  container.querySelectorAll('input[name="vision-model"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      setVisionModel(radio.value);
+      updateModelPanelSummary('upload');
+    });
+  });
+}
+
+function renderTextPriorityList(panelKey) {
+  // panelKey: 'upload' | 'text'
+  const listId = panelKey === 'upload' ? 'text-priority-list-upload' : 'text-priority-list-text';
+  const container = $(listId);
+  if (!container) return;
+  const models = getTextModelList();
+
+  container.innerHTML = models.map((id, i) => `
+    <div class="model-priority-item" data-model="${id}">
+      <span class="model-priority-num">${i + 1}</span>
+      <span class="model-priority-id" title="${id}">${id}</span>
+      <button type="button" class="model-priority-remove" data-remove="${id}" title="Xóa">✕</button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.model-priority-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.remove;
+      const list = getTextModelList().filter(m => m !== id);
+      if (list.length === 0) { showToast('Phải có ít nhất 1 model', 'error'); return; }
+      setTextModelList(list);
+      renderTextPriorityList('upload');
+      renderTextPriorityList('text');
+      updateModelPanelSummary('upload');
+      updateModelPanelSummary('text');
+    });
+  });
+}
+
+function updateModelPanelSummary(panelKey) {
+  const currentEl = $(`model-current-${panelKey}`);
+  if (!currentEl) return;
+  if (panelKey === 'upload') {
+    const fileType = state.selectedFile ? detectFileType(state.selectedFile.name) : '';
+    if (fileType === 'pdf' || fileType === 'image') {
+      const m = VISION_MODEL_DEFS.find(d => d.id === getVisionModel());
+      currentEl.textContent = m ? m.name : getVisionModel();
+    } else {
+      const list = getTextModelList();
+      currentEl.textContent = list.length === 1 ? list[0] : `${list[0]} +${list.length - 1}`;
+    }
+  } else {
+    const list = getTextModelList();
+    currentEl.textContent = list.length === 1 ? list[0] : `${list[0]} +${list.length - 1}`;
+  }
+}
+
+function showUploadModelPanel(fileType) {
+  const panel = $('model-panel-upload');
+  if (!panel) return;
+
+  const isVision = fileType === 'pdf' || fileType === 'image';
+  $('model-vision-list')?.classList.toggle('hidden', !isVision);
+  $('model-text-list-upload')?.classList.toggle('hidden', isVision);
+
+  if (isVision) {
+    renderVisionRadioList();
+  } else {
+    renderTextPriorityList('upload');
+  }
+  updateModelPanelSummary('upload');
+  panel.classList.remove('hidden');
+}
+
+function setupAddModelButton(panelKey) {
+  const inputId = `text-model-add-input-${panelKey}`;
+  const btnId = `text-model-add-btn-${panelKey}`;
+  const input = $(inputId);
+  const btn = $(btnId);
+  if (!input || !btn) return;
+
+  const doAdd = () => {
+    const val = input.value.trim();
+    if (!val) return;
+    const list = getTextModelList();
+    if (list.includes(val)) { showToast('Model đã có trong danh sách', 'error'); return; }
+    list.push(val);
+    setTextModelList(list);
+    input.value = '';
+    renderTextPriorityList('upload');
+    renderTextPriorityList('text');
+    updateModelPanelSummary('upload');
+    updateModelPanelSummary('text');
+  };
+
+  btn.addEventListener('click', doAdd);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+}
+
+function setupModelPanelToggle(panelKey) {
+  const toggleBtn = $(`model-panel-toggle-${panelKey}`);
+  const body = $(`model-panel-body-${panelKey}`);
+  if (!toggleBtn || !body) return;
+  toggleBtn.addEventListener('click', () => {
+    const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    toggleBtn.setAttribute('aria-expanded', String(!expanded));
+    body.hidden = expanded;
+  });
+}
+
+
+// ═══════════════════════════════════════════
+// BACKEND OCR HELPERS (OpenRouter Vision API)
 // ═══════════════════════════════════════════
 
 /**
- * Gộp kết quả Workers AI với rule-parser.
- * AI được ưu tiên cho các field đơn giản; rule-parser giữ noi_dung (phức tạp hơn).
+ * Gộp kết quả OpenRouter AI với rule-parser.
+ * AI được ưu tiên cho các field metadata; rule-parser giữ noi_dung nếu AI trả noi_dung_text.
  */
 function mergeExtracted(aiResult, ruleResult) {
   if (!aiResult) return ruleResult;
   const merged = { ...ruleResult };
   for (const [key, val] of Object.entries(aiResult)) {
-    if (key === 'noi_dung') continue; // rule-parser xử lý tốt hơn
+    if (key === 'noi_dung') continue; // rule-parser xử lý cấu trúc Điều/Khoản/Điểm tốt hơn
+    if (key === 'noi_dung_text') continue; // xử lý riêng bên dưới
     const isEmpty = val === null || val === undefined || val === ''
       || (Array.isArray(val) && val.length === 0);
     if (!isEmpty) merged[key] = val;
@@ -33,108 +221,156 @@ function mergeExtracted(aiResult, ruleResult) {
 }
 
 /**
- * Upload file qua MinerU 2.5 Pro (S3), extract text (ZIP), sau đó gọi /api/extract-ai để bóc tách.
+ * Render các trang PDF thành ảnh base64 bằng pdfjs (đã có sẵn trong project).
+ */
+async function pdfToBase64Images(fileBuffer) {
+  const pdfjsLib = await import('pdfjs-dist');
+
+  // Cấu hình worker cho pdfjs (cùng URL với parsers.js)
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(fileBuffer) }).promise;
+  const images = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const scale = 2; // 2x cho chất lượng OCR tốt
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({
+      canvasContext: canvas.getContext('2d'),
+      viewport,
+    }).promise;
+
+    // Chuyển canvas → base64 PNG (data URL)
+    images.push(canvas.toDataURL('image/png'));
+  }
+
+  return images;
+}
+
+/**
+ * Chuyển ảnh (file buffer) sang base64 data URL.
+ */
+function imageToBase64(fileBuffer, fileName) {
+  const ext = fileName.split('.').pop().toLowerCase();
+  const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+  const base64 = btoa(
+    new Uint8Array(fileBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+  );
+  return `data:${mime};base64,${base64}`;
+}
+
+/**
+ * Gọi OpenRouter Vision API qua Cloudflare Worker proxy.
  * Trả về { structuredData, ocrText } hoặc null nếu thất bại.
  */
 async function tryBackendOCR(fileBuffer, fileName) {
   try {
-    setProcessingStatus('1/5 Tải file lên hệ thống (qua Cloudflare Edge)...');
-    
-    // Gửi trực tiếp file dưới dạng FormData (Worker proxy sẽ lo phần S3 do một số mạng của VN chặn/chậm S3 Aliyun)
-    const formData = new FormData();
-    // Do fileBuffer chỉ là ArrayBuffer, file nguyên bản là Blob cần tên, ta gửi buffer dưới dạng file
-    formData.append('file', new Blob([fileBuffer]), fileName);
+    const fileType = detectFileType(fileName);
+    let images;
 
-    const initRes = await fetch('/api/mineru-upload', {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (!initRes.ok) {
-       const errJson = await initRes.json().catch(() => ({}));
-       throw new Error(`Upload file thất bại: ${errJson.error || initRes.statusText}`);
-    }
-    
-    const { batchId } = await initRes.json();
-    if (!batchId) {
-      throw new Error('MinerU không trả về batchId hợp lệ');
+    // Clone buffer vì pdfjs sẽ detach ArrayBuffer gốc
+    const bufferCopy = fileBuffer.slice(0);
+
+    // Bước 1: Chuyển file → ảnh base64
+    if (fileType === 'pdf') {
+      setProcessingStatus('1/3 Đang render các trang PDF thành ảnh...');
+      images = await pdfToBase64Images(bufferCopy);
+    } else {
+      // File ảnh → 1 ảnh duy nhất
+      setProcessingStatus('1/3 Đang chuẩn bị ảnh...');
+      images = [imageToBase64(bufferCopy, fileName)];
     }
 
-    setProcessingStatus('3/5 Đang chờ MinerU nhận dạng (có thể mất 1-2 phút)...');
-    let resultData = null;
-    let pollCount = 0;
-    while (pollCount < 60) {
-      await new Promise(r => setTimeout(r, 3000));
-      const statusRes = await fetch(`/api/mineru-status?batchId=${batchId}`);
-      if (!statusRes.ok) throw new Error('Lỗi truy vấn trạng thái MinerU');
-      
-      const statusData = await statusRes.json();
-      
-      // statusData structure for batch result
-      const extractResults = statusData?.data?.extract_result || [];
-      const firstTask = extractResults[0];
-
-      if (firstTask) {
-        const state = firstTask.state;
-        if (state === 'done') {
-          resultData = firstTask;
-          break;
-        }
-        if (state === 'error' || state === 'failed') {
-          throw new Error(`MinerU xử lý thất bại: ${firstTask.err_msg || 'Lỗi không xác định'}`);
-        }
-      }
-      pollCount++;
-      
-      if (pollCount >= 60) {
-        throw new Error('MinerU xử lý quá lâu (hơn 3 phút). Cổng kết nối đã đóng lại.');
-      }
+    if (!images || images.length === 0) {
+      throw new Error('Không thể chuyển file sang ảnh');
     }
 
-    if (!resultData || !resultData.full_zip_url) {
-      throw new Error('MinerU timeout hoặc kết quả trả về trống');
-    }
-
-    setProcessingStatus('4/5 Tải kết quả xử lý và giải nén...');
-    // Proxy qua Worker để tránh lỗi CORS từ CDN Trung Quốc của MinerU
-    const zipProxyUrl = `/api/mineru-download?url=${encodeURIComponent(resultData.full_zip_url)}`;
-    const zipRes = await fetch(zipProxyUrl);
-    if (!zipRes.ok) throw new Error('Lỗi khi tải file ZIP kết quả từ MinerU');
-    const zipBuffer = await zipRes.arrayBuffer();
-
-    const zip = new PizZip(zipBuffer);
-    let mdContent = '';
-    for (const [name, file] of Object.entries(zip.files)) {
-      if (!file.dir && (name.endsWith('/full.md') || name === 'full.md')) {
-        mdContent = file.asText();
-        break;
-      }
-    }
-    
-    if (!mdContent) throw new Error('Không tìm thấy file full.md trong kết quả trả về');
-
-    setProcessingStatus('5/5 Gọi AI đọc hiểu vào bóc tách các trường...');
-    const ruleResult = parseVBHC(mdContent);
-
-    const aiRes = await fetch('/api/extract-ai', {
+    // Bước 2: Gọi OpenRouter Vision API
+    setProcessingStatus(`2/3 Đang gọi AI nhận dạng văn bản (${images.length} trang)...`);
+    const res = await fetch('/api/ocr-openrouter', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ textMarkdown: mdContent })
+      body: JSON.stringify({ images, preferredModel: getVisionModel() }),
     });
-    
-    let aiExtracted = null;
-    if (aiRes.ok) {
-        const aiData = await aiRes.json();
-        if (aiData.success && aiData.extracted) {
-            aiExtracted = aiData.extracted;
-        }
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Lỗi API: ${res.status}`);
     }
 
+    const data = await res.json();
+    if (!data.success || !data.extracted) {
+      throw new Error(data.error || 'API không trả về kết quả hợp lệ');
+    }
+
+    // Bước 3: Merge với rule-parser
+    setProcessingStatus('3/3 Đang phân tích cấu trúc văn bản...');
+    const aiExtracted = data.extracted;
+
+    // Dùng noi_dung_text từ AI để chạy qua rule-parser (bóc tách Điều/Khoản/Điểm)
+    const ocrText = aiExtracted.noi_dung_text || '';
+    const ruleResult = ocrText.length > 20 ? parseVBHC(ocrText) : {};
+
     const structuredData = mergeExtracted(aiExtracted, ruleResult);
-    return { structuredData, ocrText: mdContent };
+
+    // Nếu rule-parser không parse được noi_dung, dùng text thô từ AI
+    if ((!structuredData.noi_dung || structuredData.noi_dung.length === 0) && ocrText) {
+      structuredData.noi_dung = [{ type: 'doan', so: null, tieu_de: null, text: ocrText }];
+    }
+
+    console.log(`OCR thành công qua model: ${data.model_used}`);
+    return { structuredData, ocrText };
 
   } catch (err) {
     console.error('tryBackendOCR error:', err);
+    return null;
+  }
+}
+
+/**
+ * Gọi OpenRouter text model để phân tích văn bản đã có text (DOCX / nhập tay).
+ * Không cần vision — dùng model free text.
+ */
+async function tryTextAI(text) {
+  try {
+    setProcessingStatus('Đang gọi AI phân tích văn bản (OpenRouter)...');
+    const res = await fetch('/api/ocr-openrouter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, modelList: getTextModelList() }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Lỗi API: ${res.status}`);
+    }
+
+    const data = await res.json();
+    if (!data.success || !data.extracted) {
+      throw new Error(data.error || 'API không trả về kết quả hợp lệ');
+    }
+
+    const aiExtracted = data.extracted;
+    const ocrText = aiExtracted.noi_dung_text || text;
+    const ruleResult = ocrText.length > 20 ? parseVBHC(ocrText) : parseVBHC(text);
+    const structuredData = mergeExtracted(aiExtracted, ruleResult);
+
+    if ((!structuredData.noi_dung || structuredData.noi_dung.length === 0) && ocrText) {
+      structuredData.noi_dung = [{ type: 'doan', so: null, tieu_de: null, text: ocrText }];
+    }
+
+    console.log(`Text AI thành công qua model: ${data.model_used}`);
+    return { structuredData };
+
+  } catch (err) {
+    console.error('tryTextAI error:', err);
     return null;
   }
 }
@@ -314,6 +550,9 @@ function handleFileSelected(file) {
   $('file-info')?.classList.remove('hidden');
   $('btn-process-file')?.classList.remove('hidden');
   $('btn-process-file').disabled = false;
+
+  // Show model selector
+  showUploadModelPanel(fileType);
 }
 
 function clearSelectedFile() {
@@ -323,6 +562,7 @@ function clearSelectedFile() {
   $('file-info')?.classList.add('hidden');
   $('btn-process-file')?.classList.add('hidden');
   $('btn-process-file').disabled = true;
+  $('model-panel-upload')?.classList.add('hidden');
 }
 
 function formatFileSize(bytes) {
@@ -381,14 +621,33 @@ async function processFile() {
       extractedText = text;
       setStep('step-parse', 'done');
 
+      // Gọi AI text model phân tích (free models, không cần vision)
+      if (extractedText && extractedText.trim().length > 20) {
+        showOcrStep(true);
+        setStep('step-ocr', 'active');
+        setProcessingStatus('Đang phân tích nội dung DOCX bằng AI...');
+        const aiResult = await tryTextAI(extractedText);
+        if (aiResult) {
+          setStep('step-ocr', 'done');
+          setStep('step-analyze', 'done');
+          state.parsedData = aiResult.structuredData;
+          populateReviewForm(state.parsedData);
+          navigateTo('review');
+          showToast('Phân tích AI hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
+          return;
+        }
+        setStep('step-ocr', 'done');
+        setProcessingStatus('AI thất bại, dùng phân tích rule-based...');
+      }
+
     } else if (fileType === 'pdf') {
-      // Luôn thử MinerU 2.5 Pro trước cho MỌI PDF (cả text và scan).
+      // Luôn thử OpenRouter AI trước cho MỌI PDF (cả text và scan).
       // pdf.js trích xuất text không theo thứ tự đọc với bố cục 2 cột
       // đặc trưng của văn bản hành chính ND30, dẫn đến rule-parser thất bại.
       showOcrStep(true);
       setStep('step-parse', 'done');
       setStep('step-ocr', 'active');
-      setProcessingStatus('Đang nhận dạng bản tài liệu (MinerU 2.5 Pro)...');
+      setProcessingStatus('Đang nhận dạng bản tài liệu (OpenRouter AI)...');
 
       const backendResult = await tryBackendOCR(state.selectedFileBuffer, state.selectedFile.name);
       if (backendResult) {
@@ -402,7 +661,7 @@ async function processFile() {
       }
 
       // Fallback: pdf.js text extraction (nếu MinerU thất bại)
-      setProcessingStatus('MinerU 2.5 Pro thất bại, thử trích xuất text PDF cơ bản...');
+      setProcessingStatus('AI thất bại, thử trích xuất text PDF cơ bản...');
       const { text, isScanned } = await parsePdf(state.selectedFileBuffer);
 
       if (isScanned) {
@@ -420,7 +679,7 @@ async function processFile() {
     } else if (isImage) {
       setStep('step-parse', 'done');
       setStep('step-ocr', 'active');
-      setProcessingStatus('Đang nhận dạng ảnh (MinerU 2.5 Pro)...');
+      setProcessingStatus('Đang nhận dạng ảnh (OpenRouter AI)...');
 
       const backendResult = await tryBackendOCR(state.selectedFileBuffer, state.selectedFile.name);
       if (backendResult) {
@@ -434,7 +693,7 @@ async function processFile() {
       }
 
       // Fallback: Tesseract.js
-      setProcessingStatus('MinerU 2.5 Pro thất bại, đang dùng OCR dự phòng...');
+      setProcessingStatus('AI thất bại, đang dùng OCR dự phòng...');
       const { ocrImage } = await import('./ocr-engine.js');
       const blob = new Blob([state.selectedFileBuffer]);
       extractedText = await ocrImage(blob, (pct) => {
@@ -485,26 +744,38 @@ async function processText() {
   navigateTo('processing');
 
   try {
-    showOcrStep(false);
-
     // Step 1: Read done immediately (text already available)
     setStep('step-parse', 'done');
 
-    // Step 2: Rule-based parsing
-    setStep('step-analyze', 'active');
-    setProcessingStatus('Đang phân tích cấu trúc văn bản...');
+    // Step 2: Thử AI text model trước
+    showOcrStep(true);
+    setStep('step-ocr', 'active');
+    setProcessingStatus('Đang phân tích văn bản bằng AI (OpenRouter)...');
 
-    // Small delay to show processing animation
+    const aiResult = await tryTextAI(text);
+    if (aiResult) {
+      setStep('step-ocr', 'done');
+      setStep('step-analyze', 'done');
+      state.parsedData = aiResult.structuredData;
+      populateReviewForm(state.parsedData);
+      navigateTo('review');
+      showToast('Phân tích AI hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
+      return;
+    }
+
+    // Fallback: rule-based parsing
+    setStep('step-ocr', 'done');
+    setStep('step-analyze', 'active');
+    setProcessingStatus('AI thất bại, đang phân tích rule-based...');
     await new Promise(r => setTimeout(r, 300));
 
     const structuredData = parseVBHC(text);
     setStep('step-analyze', 'done');
 
-    // Show review form
     state.parsedData = structuredData;
     populateReviewForm(structuredData);
     navigateTo('review');
-    showToast('Phân tích hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
+    showToast('Phân tích hoàn tất (rule-based). Vui lòng kiểm tra kết quả.', 'success');
 
   } catch (error) {
     console.error('Process text error:', error);
@@ -595,6 +866,9 @@ function populateReviewForm(data) {
   // Trích yếu
   setVal('review-trich-yeu', data.trich_yeu);
 
+  // Chức danh ban hành
+  setVal('review-chuc-danh-ban-hanh', data.chuc_danh_ban_hanh);
+
   // Căn cứ (mỗi dòng = 1 item)
   setVal('review-can-cu', Array.isArray(data.can_cu) ? data.can_cu.join('\n') : '');
 
@@ -639,6 +913,7 @@ function collectReviewData() {
     thang: getVal('review-thang'),
     nam: getVal('review-nam'),
     trich_yeu: getVal('review-trich-yeu'),
+    chuc_danh_ban_hanh: getVal('review-chuc-danh-ban-hanh'),
     can_cu: splitLines(getVal('review-can-cu')),
     kinh_gui: splitLines(getVal('review-kinh-gui')),
     noi_dung: noiDungItems,
@@ -901,6 +1176,15 @@ function initEventListeners() {
     const items = textToContentItems(text);
     renderNoiDungPreview(items);
   });
+
+  // Model panel toggles & add buttons
+  setupModelPanelToggle('upload');
+  setupModelPanelToggle('text');
+  setupAddModelButton('upload');
+  setupAddModelButton('text');
+  // Render text panel for text view on load
+  renderTextPriorityList('text');
+  updateModelPanelSummary('text');
 }
 
 

@@ -149,6 +149,44 @@
         </div>
       </div>
 
+      <!-- ── Model AI Selector (upload) ── -->
+      <div id="model-panel-upload" class="model-panel hidden">
+        <button type="button" class="model-panel-header" id="model-panel-toggle-upload" aria-expanded="false">
+          <div class="model-panel-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+            <span>Model AI</span>
+          </div>
+          <div class="model-panel-current">
+            <span id="model-current-upload" class="model-current-name">—</span>
+            <svg class="model-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </button>
+        <div class="model-panel-body" id="model-panel-body-upload" hidden>
+          <!-- Vision list (PDF/Ảnh) -->
+          <div id="model-vision-list" class="model-section">
+            <p class="model-section-hint">Chọn model nhận dạng ảnh / PDF:</p>
+            <div class="model-radio-list" id="vision-radio-list">
+              <!-- rendered by JS -->
+            </div>
+          </div>
+          <!-- Text list (DOCX) -->
+          <div id="model-text-list-upload" class="model-section hidden">
+            <p class="model-section-hint">Thứ tự ưu tiên model (thử lần lượt từ trên xuống):</p>
+            <div class="model-priority-list" id="text-priority-list-upload">
+              <!-- rendered by JS -->
+            </div>
+            <div class="model-add-row">
+              <input type="text" id="text-model-add-input-upload" class="model-add-input" placeholder="Nhập model ID, VD: nvidia/..." />
+              <button type="button" id="text-model-add-btn-upload" class="model-add-btn">+ Thêm</button>
+            </div>
+            <a href="https://openrouter.ai/models?q=:free" target="_blank" rel="noopener" class="model-openrouter-link">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Xem danh sách model free tại OpenRouter
+            </a>
+          </div>
+        </div>
+      </div>
+
       <button id="btn-process-file" class="btn-primary btn-process hidden" disabled>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         <span>Bắt đầu Chuẩn hóa</span>
@@ -167,6 +205,36 @@
         <textarea id="text-input" class="text-input" placeholder="Dán nội dung văn bản hành chính vào đây...&#10;&#10;Ví dụ:&#10;UBND TỈNH AN GIANG&#10;Số: 05/QĐ-UBND&#10;Hà Nội, ngày 05 tháng 03 năm 2024&#10;QUYẾT ĐỊNH&#10;Về việc ..." rows="16"></textarea>
         <div class="text-counter">
           <span id="char-count">0</span> ký tự
+        </div>
+      </div>
+
+      <!-- ── Model AI Selector (text) ── -->
+      <div id="model-panel-text" class="model-panel">
+        <button type="button" class="model-panel-header" id="model-panel-toggle-text" aria-expanded="false">
+          <div class="model-panel-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+            <span>Model AI</span>
+          </div>
+          <div class="model-panel-current">
+            <span id="model-current-text" class="model-current-name">—</span>
+            <svg class="model-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </button>
+        <div class="model-panel-body" id="model-panel-body-text" hidden>
+          <div class="model-section">
+            <p class="model-section-hint">Thứ tự ưu tiên model (thử lần lượt từ trên xuống):</p>
+            <div class="model-priority-list" id="text-priority-list-text">
+              <!-- rendered by JS -->
+            </div>
+            <div class="model-add-row">
+              <input type="text" id="text-model-add-input-text" class="model-add-input" placeholder="Nhập model ID, VD: nvidia/..." />
+              <button type="button" id="text-model-add-btn-text" class="model-add-btn">+ Thêm</button>
+            </div>
+            <a href="https://openrouter.ai/models?q=:free" target="_blank" rel="noopener" class="model-openrouter-link">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Xem danh sách model free tại OpenRouter
+            </a>
+          </div>
         </div>
       </div>
 
@@ -195,7 +263,7 @@
           </div>
           <div id="step-ocr" class="step-item" style="display:none">
             <div class="step-dot"></div>
-            <span>OCR tiếng Việt (Tesseract)</span>
+            <span>AI nhận dạng văn bản (OpenRouter)</span>
           </div>
           <div id="step-analyze" class="step-item">
             <div class="step-dot"></div>
@@ -322,6 +390,14 @@
           <h3 class="form-section-title" id="label-trich-yeu">Trích yếu</h3>
           <div class="form-group">
             <textarea id="review-trich-yeu" rows="2" placeholder="Về việc..."></textarea>
+          </div>
+        </div>
+
+        <!-- ── Chức danh ban hành (QĐ, NQ) ── -->
+        <div class="form-section" id="section-chuc-danh-ban-hanh">
+          <h3 class="form-section-title">Chức danh ban hành</h3>
+          <div class="form-group">
+            <input type="text" id="review-chuc-danh-ban-hanh" placeholder="VD: CHỦ TỊCH ỦY BAN NHÂN DÂN THÀNH PHỐ CHÂU ĐỐC" />
           </div>
         </div>
 
