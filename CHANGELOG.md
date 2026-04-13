@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## [2.2.0] — 2026-04-13
+
+### Tổng quan
+Nâng cấp trải nghiệm người dùng với tính năng tìm kiếm model thông minh và thiết kế lại hoàn toàn giao diện biểu mẫu "Kiểm tra & Chỉnh sửa" theo phong cách thẻ (Card-based), đồng thời tối ưu hóa logic ẩn/hiện các trường thông tin theo từng loại văn bản.
+
+---
+
+### Tính năng mới & Cải tiến
+
+#### Tìm kiếm Model thông minh
+- Bổ sung thanh tìm kiếm (`#model-search`) trong Model Panel, cho phép lọc nhanh danh sách hàng trăm model từ OpenRouter.
+- Tối ưu hóa hiệu suất lọc dữ liệu ngay khi người dùng gõ phím.
+
+#### Thiết kế lại Form "Kiểm tra & Chỉnh sửa"
+- **Giao diện dạng Thẻ (Card Layout)**: Phân chia biểu mẫu thành 5 mảng logic (Phân loại, Thể thức đầu trang, Trích yếu & Mở đầu, Nội dung chính, Ký tên & Nơi nhận) giúp thông tin minh bạch, dễ quản lý.
+- **Tối ưu hóa Grid**: Chuyển đổi các lưới 6 cột chật chội sang lưới 2 hoặc 3 cột thông thoáng, đảm bảo hiển thị đẹp trên mọi kích thước màn hình laptop.
+- **Khoảng cách & Trực quan**: Tăng cường padding và khoảng cách giữa các phần tử để giảm bớt sự choáng ngợp khi thao tác với văn bản dài.
+
+#### Logic Thể thức Văn bản (NĐ30/HD36)
+- **Thông minh hóa trường Chức danh ban hành**: Tự động ẩn/hiện mục "Chức danh ban hành" chuẩn xác theo từng loại văn bản (Hiện với Quyết định/Nghị quyết, ẩn với Công văn/Tờ trình/Báo cáo).
+- **Cập nhật Schema**: Bổ sung cờ điều hướng hiển thị `showChucDanhBanHanh` cho toàn bộ hệ thống schema hành chính và Đảng.
+
+---
+
+### Thay đổi kỹ thuật
+
+#### Frontend
+- `index.html`: Tái cấu trúc hoàn toàn thẻ `<form id="review-form">` sang hệ thống Card UI.
+- `src/main.js`:
+  - Thêm logic lọc model trong `renderModelPriorityList()`.
+  - Cập nhật hàm `applyDocSchema()` để điều khiển ẩn/hiện `#section-chuc-danh-ban-hanh`.
+- `src/doc-schemas.js` & `src/hd36-schemas.js`: Cập nhật cấu trúc điều hướng cho các loại văn bản đặc thù.
+
+---
+
 ## [2.1.0] — 2026-04-13
 
 ### Tổng quan

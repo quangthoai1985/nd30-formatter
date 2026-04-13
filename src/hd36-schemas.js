@@ -13,6 +13,7 @@ export const HD36_SCHEMAS = {
     showTenLoai: true,
     showCanCu: true,
     showKinhGui: false,
+    showChucDanhBanHanh: true,
     trichYeuLabel: 'Trích yếu',
     trichYeuPlaceholder: 'về tăng cường công tác cán bộ...',
     noiDungPlaceholder:
@@ -58,6 +59,7 @@ export const HD36_SCHEMAS = {
     showTenLoai: true,
     showCanCu: true,
     showKinhGui: false,
+    showChucDanhBanHanh: true,
     trichYeuLabel: 'Trích yếu',
     trichYeuPlaceholder: 'về việc thành lập Ban Chỉ đạo...',
     noiDungPlaceholder:

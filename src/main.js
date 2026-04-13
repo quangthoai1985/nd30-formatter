@@ -18,18 +18,23 @@ import { getHD36Schema, isHD36Type } from './hd36-schemas.js';
 // ═══════════════════════════════════════════
 
 // Fallback defaults nếu chưa fetch được từ API
+// Đa dạng nhà cung cấp để tránh bị block theo region (không chỉ Google)
 const DEFAULT_VISION_MODEL_LIST = [
-  'google/gemini-3.1-flash-lite-preview',
-  'google/gemini-3-flash-preview',
-  'google/gemini-3.1-pro-preview',
+  'qwen/qwen3.5-9b',                          // $0.05/M, vision, Qwen
+  'bytedance-seed/seed-1.6-flash',             // $0.075/M, vision, ByteDance
+  'google/gemini-3.1-flash-lite-preview',      // $0.25/M, vision, Google
+  'google/gemini-3-flash-preview',             // $0.50/M, vision, Google
+  'nvidia/nemotron-3-super-120b-a12b:free',    // Free, vision, NVIDIA
+  'google/gemma-4-31b-it:free',                // Free, vision, Google
 ];
 
 const DEFAULT_TEXT_MODEL_LIST = [
-  'google/gemini-3.1-flash-lite-preview',
-  'qwen/qwen3.5-9b',
-  'google/gemini-3-flash-preview',
-  'nvidia/nemotron-nano-12b-v2-vl:free',
-  'google/gemma-4-26b-a4b-it:free',
+  'qwen/qwen3.5-9b',                          // $0.05/M, Qwen
+  'bytedance-seed/seed-1.6-flash',             // $0.075/M, ByteDance
+  'google/gemini-3.1-flash-lite-preview',      // $0.25/M, Google
+  'google/gemini-3-flash-preview',             // $0.50/M, Google
+  'nvidia/nemotron-3-super-120b-a12b:free',    // Free, NVIDIA
+  'google/gemma-4-31b-it:free',                // Free, Google
 ];
 
 const MODEL_PREFS_KEY = 'nd30_model_prefs';
@@ -181,6 +186,7 @@ function renderModelPriorityList(containerId, modelType, fetchedModels) {
 
   let html = `<div class="model-select-section">
     <p class="model-section-hint">${hint}</p>
+    <input type="text" class="model-search-input" id="search-${containerId}" placeholder="Tìm nhanh model (vd: google, qwen)..." autocomplete="off" />
     <select class="model-select" id="model-select-${containerId}">
       <option value="">-- Chọn model --</option>
       ${optionsHtml}
@@ -204,6 +210,22 @@ function renderModelPriorityList(containerId, modelType, fetchedModels) {
 
   container.innerHTML = html;
 
+  // Event: Lọc danh sách model
+  const searchInput = container.querySelector(`#search-${containerId}`);
+  const selectEl = container.querySelector(`#model-select-${containerId}`);
+  if (searchInput && selectEl) {
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      let filtered = relevantModels;
+      if (q) {
+        filtered = relevantModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q));
+      }
+      selectEl.innerHTML = `<option value="">-- Chọn model --</option>` + filtered.map(m =>
+        `<option value="${m.id}">${m.name} (${formatModelPrice(m)})</option>`
+      ).join('');
+    });
+  }
+
   // Event: xóa model khỏi danh sách
   container.querySelectorAll('.model-priority-remove').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -219,7 +241,7 @@ function renderModelPriorityList(containerId, modelType, fetchedModels) {
   const addBtn = container.querySelector('.btn-add-model');
   if (addBtn) {
     addBtn.addEventListener('click', () => {
-      const select = $(`model-select-${containerId}`);
+      const select = container.querySelector(`#model-select-${containerId}`);
       const modelId = select?.value;
       if (!modelId) { showToast('Hãy chọn một model', 'error'); return; }
       const list = modelType === 'vision' ? getVisionModelList() : getTextModelList();
@@ -879,6 +901,10 @@ function applyDocSchema(loai) {
   // ── Section: Kính gửi ──
   const secKinhGui = $('section-kinh-gui');
   if (secKinhGui) secKinhGui.hidden = schema ? !schema.showKinhGui : false;
+
+  // ── Section: Chức danh ban hành ──
+  const secChucDanh = $('section-chuc-danh-ban-hanh');
+  if (secChucDanh) secChucDanh.hidden = schema ? !schema.showChucDanhBanHanh : false;
 
   if (!schema) return;
 

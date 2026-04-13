@@ -20,6 +20,7 @@ export const DOC_SCHEMAS = {
     showTenLoai: true,
     showCanCu: true,
     showKinhGui: false,
+    showChucDanhBanHanh: true,
     trichYeuLabel: 'Về việc',
     trichYeuPlaceholder: 'Về việc ban hành quy chế...',
     noiDungPlaceholder:
@@ -34,6 +35,7 @@ export const DOC_SCHEMAS = {
     showTenLoai: true,
     showCanCu: true,
     showKinhGui: false,
+    showChucDanhBanHanh: true,
     trichYeuLabel: 'Về việc',
     trichYeuPlaceholder: 'Về việc thông qua...',
     noiDungPlaceholder:

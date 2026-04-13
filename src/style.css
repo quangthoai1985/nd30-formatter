@@ -1592,6 +1592,28 @@ body {
   border-bottom: 1px dashed var(--outline-variant);
 }
 
+.model-search-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-md);
+  margin-bottom: var(--space-sm);
+  background: var(--surface-container-low);
+  border: 1.5px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  transition: all var(--duration-fast);
+  box-sizing: border-box;
+}
+
+.model-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 91, 191, 0.12);
+  background: var(--surface-container-lowest);
+}
+
 .model-select {
   width: 100%;
   height: 44px;

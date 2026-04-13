@@ -4,21 +4,25 @@
  * Chiến lược: thử model free trước → fallback model trả phí rẻ nếu lỗi 429/503.
  */
 
-// Model có vision (dùng cho PDF/ảnh) — CHỈ dùng model thực sự hỗ trợ vision
+// Model có vision (dùng cho PDF/ảnh)
+// Đa dạng nhà cung cấp: Qwen, ByteDance, Google, NVIDIA — tránh block region
 const VISION_MODELS = [
-  'google/gemini-3.1-flash-lite-preview',   // $0.25/M, vision, ổn định
-  'google/gemini-3-flash-preview',           // $0.50/M, vision, mạnh hơn
-  'google/gemini-3.1-pro-preview',           // $1.00/M, vision, mạnh nhất
-  'google/gemma-4-26b-a4b-it:free',          // Free, text only - fallback cuối
+  'qwen/qwen3.5-9b',                          // $0.05/M, vision, Qwen
+  'bytedance-seed/seed-1.6-flash',             // $0.075/M, vision, ByteDance
+  'google/gemini-3.1-flash-lite-preview',      // $0.25/M, vision, Google
+  'google/gemini-3-flash-preview',             // $0.50/M, vision, Google
+  'nvidia/nemotron-3-super-120b-a12b:free',    // Free, vision, NVIDIA
+  'google/gemma-4-31b-it:free',                // Free, vision, Google
 ];
 
-// Model text (dùng cho DOCX và text nhập tay — ưu tiên trả phí rẻ + nhanh)
+// Model text (dùng cho DOCX và text nhập tay)
 const TEXT_MODELS = [
-  'google/gemini-3.1-flash-lite-preview',   // $0.25/M, nhanh
-  'qwen/qwen3.5-9b',                         // $0.05/M, text only
-  'google/gemini-3-flash-preview',           // $0.50/M, mạnh hơn
-  'nvidia/nemotron-nano-12b-v2-vl:free',   // Free, fallback
-  'google/gemma-4-26b-a4b-it:free',          // Free, fallback
+  'qwen/qwen3.5-9b',                          // $0.05/M, Qwen
+  'bytedance-seed/seed-1.6-flash',             // $0.075/M, ByteDance
+  'google/gemini-3.1-flash-lite-preview',      // $0.25/M, Google
+  'google/gemini-3-flash-preview',             // $0.50/M, Google
+  'nvidia/nemotron-3-super-120b-a12b:free',    // Free, NVIDIA
+  'google/gemma-4-31b-it:free',                // Free, Google
 ];
 
 const VALID_LOAI = new Set([
@@ -153,22 +157,19 @@ export async function onRequestPost({ request, env }) {
           })
         });
 
-        // Model quá tải → thử model tiếp theo
-        if (response.status === 429 || response.status === 503) {
-          lastError = `Model ${model} quá tải (${response.status})`;
-          continue;
-        }
-
+        // Model lỗi → log rõ ràng và thử model tiếp theo
         if (!response.ok) {
           const errText = await response.text();
-          lastError = `Model ${model} lỗi ${response.status}: ${errText.substring(0, 300)}`;
-          // 404 = model không tồn tại, không cần retry
-          if (response.status === 404) continue;
-          // "does not support image input" = model không phải vision, skip
-          if (errText.includes('does not support image input') || errText.includes('image_url')) {
-            console.log(`Model ${model} không hỗ trợ vision, skip`);
-            continue;
+          if (response.status === 429 || response.status === 503) {
+            lastError = `Model ${model} quá tải (${response.status})`;
+          } else if (response.status === 403) {
+            lastError = `Model ${model} không khả dụng tại region này`;
+          } else if (response.status === 404) {
+            lastError = `Model ${model} không tồn tại`;
+          } else {
+            lastError = `Model ${model} lỗi ${response.status}: ${errText.substring(0, 200)}`;
           }
+          console.log(`[ocr-openrouter] Skip: ${lastError}`);
           continue;
         }
 
