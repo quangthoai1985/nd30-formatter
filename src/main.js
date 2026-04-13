@@ -176,21 +176,17 @@ function renderModelPriorityList(containerId, modelType, fetchedModels) {
     modelType === 'vision' ? m.vision : true
   );
 
-  const optionsHtml = relevantModels.map(m =>
-    `<option value="${m.id}">${m.name} (${formatModelPrice(m)})</option>`
-  ).join('');
-
   const hint = modelType === 'vision'
     ? 'Chọn model nhận dạng ảnh / PDF để thêm:'
     : 'Chọn model để thêm vào danh sách ưu tiên:';
 
   let html = `<div class="model-select-section">
     <p class="model-section-hint">${hint}</p>
-    <input type="text" class="model-search-input" id="search-${containerId}" placeholder="Tìm nhanh model (vd: google, qwen)..." autocomplete="off" />
-    <select class="model-select" id="model-select-${containerId}">
-      <option value="">-- Chọn model --</option>
-      ${optionsHtml}
-    </select>
+    <div class="combo-box" id="combo-${containerId}">
+      <input type="text" class="combo-input" placeholder="Gõ tên để tìm hoặc chọn model..." autocomplete="off" />
+      <input type="hidden" class="combo-value" id="model-select-${containerId}" />
+      <div class="combo-dropdown"></div>
+    </div>
     <button type="button" class="btn-add-model" data-container="${containerId}">+ Thêm vào danh sách</button>
   </div>`;
 
@@ -210,21 +206,63 @@ function renderModelPriorityList(containerId, modelType, fetchedModels) {
 
   container.innerHTML = html;
 
-  // Event: Lọc danh sách model
-  const searchInput = container.querySelector(`#search-${containerId}`);
-  const selectEl = container.querySelector(`#model-select-${containerId}`);
-  if (searchInput && selectEl) {
-    searchInput.addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase();
-      let filtered = relevantModels;
-      if (q) {
-        filtered = relevantModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q));
+  // Event: Lọc danh sách model - Custom ComboBox
+  const wrapper = container.querySelector(`#combo-${containerId}`);
+  const inputEl = wrapper.querySelector('.combo-input');
+  const valueEl = wrapper.querySelector('.combo-value');
+  const dropdownEl = wrapper.querySelector('.combo-dropdown');
+
+  const renderDropdown = (items) => {
+    if (items.length === 0) {
+      dropdownEl.innerHTML = `<div class="combo-item" style="color:var(--outline); text-align:center;">Không tìm thấy model</div>`;
+      return;
+    }
+    dropdownEl.innerHTML = items.map(m => `
+      <div class="combo-item" data-id="${m.id}" data-name="${m.name}">
+        <div class="combo-item-title">
+          <span>${m.name}</span>
+          <span class="model-badge ${m.free ? 'model-badge-free' : 'model-badge-paid'}">${formatModelPrice(m)}</span>
+        </div>
+        <div class="combo-item-id">${m.id}</div>
+      </div>
+    `).join('');
+
+    // Attach click events
+    dropdownEl.querySelectorAll('.combo-item').forEach(item => {
+      if (item.dataset.id) {
+        item.addEventListener('click', () => {
+          inputEl.value = item.dataset.name;
+          valueEl.value = item.dataset.id;
+          dropdownEl.classList.remove('active');
+        });
       }
-      selectEl.innerHTML = `<option value="">-- Chọn model --</option>` + filtered.map(m =>
-        `<option value="${m.id}">${m.name} (${formatModelPrice(m)})</option>`
-      ).join('');
     });
-  }
+  };
+
+  inputEl.addEventListener('focus', () => {
+    dropdownEl.classList.add('active');
+    renderDropdown(relevantModels);
+  });
+
+  inputEl.addEventListener('input', (e) => {
+    dropdownEl.classList.add('active');
+    const q = e.target.value.toLowerCase().trim();
+    if (!q) {
+      valueEl.value = "";
+      renderDropdown(relevantModels);
+      return;
+    }
+    const filtered = relevantModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q));
+    valueEl.value = ""; // clear hidden value if typing to enforce valid selection
+    renderDropdown(filtered);
+  });
+
+  // Hide dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (wrapper && !wrapper.contains(e.target)) {
+      dropdownEl.classList.remove('active');
+    }
+  });
 
   // Event: xóa model khỏi danh sách
   container.querySelectorAll('.model-priority-remove').forEach(btn => {

@@ -1592,47 +1592,88 @@ body {
   border-bottom: 1px dashed var(--outline-variant);
 }
 
-.model-search-input {
+.combo-box {
+  position: relative;
   width: 100%;
-  height: 44px;
-  padding: 0 var(--space-md);
   margin-bottom: var(--space-sm);
-  background: var(--surface-container-low);
-  border: 1.5px solid var(--outline-variant);
-  border-radius: var(--radius-md);
-  color: var(--on-surface);
-  font-family: var(--font-body);
-  font-size: 0.9375rem;
-  transition: all var(--duration-fast);
-  box-sizing: border-box;
 }
 
-.model-search-input:focus {
+.combo-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 40px 0 var(--space-md);
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  transition: all var(--duration-fast);
+  box-sizing: border-box;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23727785' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: text;
+}
+
+.combo-input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(0, 91, 191, 0.12);
-  background: var(--surface-container-lowest);
 }
 
-.model-select {
-  width: 100%;
-  height: 44px;
-  padding: 0 var(--space-md);
+.combo-input::placeholder {
+  color: var(--outline);
+}
+
+.combo-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  background: var(--surface-container-lowest);
   border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-lg);
-  font-size: 0.875rem;
-  font-family: var(--font-body);
-  background: var(--surface-container-lowest);
-  color: var(--on-surface);
-  outline: none;
-  cursor: pointer;
-  margin-bottom: var(--space-sm);
-  transition: border-color var(--duration-fast);
-  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  display: none;
+  margin-top: 4px;
 }
 
-.model-select:focus {
-  border-color: var(--primary);
+.combo-dropdown.active {
+  display: block;
+}
+
+.combo-item {
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(193, 198, 214, 0.15);
+}
+
+.combo-item:last-child {
+  border-bottom: none;
+}
+
+.combo-item:hover {
+  background: var(--surface-container-low);
+}
+
+.combo-item-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.combo-item-id {
+  font-size: 0.75rem;
+  color: var(--outline);
+  font-family: monospace;
 }
 
 .model-priority-header {

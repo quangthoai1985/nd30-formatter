@@ -9,9 +9,8 @@ Nâng cấp trải nghiệm người dùng với tính năng tìm kiếm model t
 
 ### Tính năng mới & Cải tiến
 
-#### Tìm kiếm Model thông minh
-- Bổ sung thanh tìm kiếm (`#model-search`) trong Model Panel, cho phép lọc nhanh danh sách hàng trăm model từ OpenRouter.
-- Tối ưu hóa hiệu suất lọc dữ liệu ngay khi người dùng gõ phím.
+#### Tìm kiếm Model thông minh (Tích hợp Select & Search)
+- Tích hợp tính năng SelectBox nâng cao: Combobox thay thế hoàn toàn giao diện Select native nhàm chán bằng giải pháp 2 trong 1. Vừa hiển thị danh sách models gọn gàng, vừa cho phép gõ trực tiếp tên model để tìm kiếm trong thẻ Dropdown. Tính năng được tích hợp trực tiếp không dùng thư viện ngoài nào (100% Vanilla JS).
 
 #### Thiết kế lại Form "Kiểm tra & Chỉnh sửa"
 - **Giao diện dạng Thẻ (Card Layout)**: Phân chia biểu mẫu thành 5 mảng logic (Phân loại, Thể thức đầu trang, Trích yếu & Mở đầu, Nội dung chính, Ký tên & Nơi nhận) giúp thông tin minh bạch, dễ quản lý.
