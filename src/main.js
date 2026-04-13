@@ -14,16 +14,14 @@ import { getHD36Schema, isHD36Type } from './hd36-schemas.js';
 
 
 // ═══════════════════════════════════════════
-// MODEL PREFERENCES
+// MODEL PREFERENCES (Auto-fetch từ OpenRouter)
 // ═══════════════════════════════════════════
 
-const VISION_MODEL_DEFS = [
-  // ── Trả phí (CHỈ những model thực sự hỗ trợ vision) ──
-  { id: 'google/gemini-3.1-flash-lite-preview',   name: 'Gemini 3.1 Flash Lite',   free: false, price: '$0.25/M' },
-  { id: 'google/gemini-3-flash-preview',           name: 'Gemini 3 Flash',          free: false, price: '$0.50/M' },
-  { id: 'google/gemini-3.1-pro-preview',           name: 'Gemini 3.1 Pro',           free: false, price: '$1.00/M' },
-  // ── Free (chỉ dùng làm fallback cuối) ──
-  { id: 'google/gemma-4-26b-a4b-it:free',          name: 'Gemma 4 26B (text only)',  free: true },
+// Fallback defaults nếu chưa fetch được từ API
+const DEFAULT_VISION_MODEL_LIST = [
+  'google/gemini-3.1-flash-lite-preview',
+  'google/gemini-3-flash-preview',
+  'google/gemini-3.1-pro-preview',
 ];
 
 const DEFAULT_TEXT_MODEL_LIST = [
@@ -32,12 +30,6 @@ const DEFAULT_TEXT_MODEL_LIST = [
   'google/gemini-3-flash-preview',
   'nvidia/nemotron-nano-12b-v2-vl:free',
   'google/gemma-4-26b-a4b-it:free',
-];
-
-const TEXT_MODEL_OPTIONS = [
-  { id: 'google/gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', price: '$0.25/M' },
-  { id: 'qwen/qwen3.5-9b',                        name: 'Qwen 3.5 9B (text only)', price: '$0.05/M' },
-  { id: 'google/gemini-3-flash-preview',          name: 'Gemini 3 Flash',         price: '$0.50/M' },
 ];
 
 const MODEL_PREFS_KEY = 'nd30_model_prefs';
@@ -54,9 +46,11 @@ function saveModelPrefs(prefs) {
   try { localStorage.setItem(MODEL_PREFS_KEY, JSON.stringify(prefs)); } catch {}
 }
 
-function getVisionModel() {
+function getVisionModelList() {
   const p = loadModelPrefs();
-  return (p?.visionModel) || VISION_MODEL_DEFS[0].id; // default: Gemini 3.1 Flash Lite
+  return (Array.isArray(p?.visionModels) && p.visionModels.length > 0)
+    ? p.visionModels
+    : [...DEFAULT_VISION_MODEL_LIST];
 }
 
 function getTextModelList() {
@@ -66,9 +60,9 @@ function getTextModelList() {
     : [...DEFAULT_TEXT_MODEL_LIST];
 }
 
-function setVisionModel(modelId) {
+function setVisionModelList(list) {
   const p = loadModelPrefs() || {};
-  p.visionModel = modelId;
+  p.visionModels = list;
   saveModelPrefs(p);
 }
 
@@ -79,25 +73,28 @@ function setTextModelList(list) {
 }
 
 // ─────────────────────────────────────────────
-// FETCH FREE MODELS FROM OPENROUTER
+// FETCH MODELS FROM OPENROUTER (Auto-fetch với giá live)
 // ─────────────────────────────────────────────
 
-const MODELS_CACHE_KEY = 'nd30_free_models';
-const MODELS_CACHE_TTL = 5 * 60 * 1000;
+const MODELS_CACHE_KEY = 'nd30_models_v2';
+const MODELS_CACHE_TTL = 30 * 60 * 1000; // 30 phút
 
-let cachedFreeModels = null;
+let cachedAllModels = null;
 let cachedModelsTs = 0;
 
-async function fetchFreeModels() {
-  if (cachedFreeModels && (Date.now() - cachedModelsTs) < MODELS_CACHE_TTL) {
-    return cachedFreeModels;
+/**
+ * Fetch tất cả models từ OpenRouter API (có giá + vision flag).
+ * Returns: Array<{ id, name, price, vision, free }>
+ */
+async function fetchModels() {
+  if (cachedAllModels && (Date.now() - cachedModelsTs) < MODELS_CACHE_TTL) {
+    return cachedAllModels;
   }
 
   try {
-    // Skip fetch khi chạy localhost dev (không có Cloudflare Worker)
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocalhost) {
-      return getFreeModelsSync() || null;
+      return getModelsSync() || null;
     }
 
     const res = await fetch('/api/models');
@@ -109,20 +106,20 @@ async function fetchFreeModels() {
     if (!data.success || !Array.isArray(data.models)) {
       throw new Error(data.error || 'Không nhận được danh sách model hợp lệ');
     }
-    cachedFreeModels = data.models;
+    cachedAllModels = data.models;
     cachedModelsTs = data.ts || Date.now();
-    localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify({ models: cachedFreeModels, ts: cachedModelsTs }));
-    return cachedFreeModels;
+    localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify({ models: cachedAllModels, ts: cachedModelsTs }));
+    return cachedAllModels;
   } catch (err) {
-    console.warn('fetchFreeModels error:', err);
+    console.warn('fetchModels error:', err);
     const cached = localStorage.getItem(MODELS_CACHE_KEY);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
         if (parsed.models) {
-          cachedFreeModels = parsed.models;
+          cachedAllModels = parsed.models;
           cachedModelsTs = parsed.ts || 0;
-          return cachedFreeModels;
+          return cachedAllModels;
         }
       } catch {}
     }
@@ -130,121 +127,121 @@ async function fetchFreeModels() {
   }
 }
 
-function getFreeModelsSync() {
-  if (cachedFreeModels) return cachedFreeModels;
+function getModelsSync() {
+  if (cachedAllModels) return cachedAllModels;
   const cached = localStorage.getItem(MODELS_CACHE_KEY);
   if (cached) {
     try {
       const parsed = JSON.parse(cached);
       if (parsed.models && (Date.now() - (parsed.ts || 0)) < MODELS_CACHE_TTL) {
-        cachedFreeModels = parsed.models;
+        cachedAllModels = parsed.models;
         cachedModelsTs = parsed.ts || 0;
-        return cachedFreeModels;
+        return cachedAllModels;
       }
     } catch {}
   }
   return null;
 }
 
-function setCachedFreeModels(models) {
-  cachedFreeModels = models;
-  cachedModelsTs = Date.now();
-  localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify({ models, ts: cachedModelsTs }));
+/** Helper: format giá model */
+function formatModelPrice(m) {
+  if (!m) return '';
+  return m.free ? 'Free' : `$${m.price}/M`;
 }
 
 // ─────────────────────────────────────────────
 // Model Panel UI
 // ─────────────────────────────────────────────
 
-function renderVisionRadioList() {
-  const container = $('vision-radio-list');
+/**
+ * Render priority list cho cả Vision và Text.
+ * @param {string} containerId  - ID của container element
+ * @param {'vision'|'text'} modelType - Loại model
+ * @param {Array|null} fetchedModels - Danh sách models từ OpenRouter API
+ */
+function renderModelPriorityList(containerId, modelType, fetchedModels) {
+  const container = $(containerId);
   if (!container) return;
-  const selected = getVisionModel();
-  container.innerHTML = VISION_MODEL_DEFS.map(m => `
-    <label class="model-radio-item">
-      <input type="radio" name="vision-model" value="${m.id}" ${m.id === selected ? 'checked' : ''}>
-      <div class="model-radio-info">
-        <span class="model-radio-name">${m.name}</span>
-        <span class="model-radio-id">${m.id}</span>
-      </div>
-      <span class="model-badge ${m.free ? 'model-badge-free' : 'model-badge-paid'}">${m.free ? 'Free' : (m.price || 'Trả phí')}</span>
-    </label>
-  `).join('');
 
-  container.querySelectorAll('input[name="vision-model"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      setVisionModel(radio.value);
-      updateModelPanelSummary('upload');
-    });
-  });
-}
+  const currentList = modelType === 'vision' ? getVisionModelList() : getTextModelList();
+  const setList = modelType === 'vision' ? setVisionModelList : setTextModelList;
 
-function renderTextPriorityList(panelKey, freeModels = null) {
-  const listId = panelKey === 'upload' ? 'text-priority-list-upload' : 'text-priority-list-text';
-  const container = $(listId);
-  if (!container) return;
-  const models = getTextModelList();
+  // Lọc models phù hợp từ API: vision chỉ hiện vision-capable, text hiện tất cả
+  const relevantModels = (fetchedModels || []).filter(m =>
+    modelType === 'vision' ? m.vision : true
+  );
 
-  const allOptions = [
-    ...TEXT_MODEL_OPTIONS.map(m => ({ id: m.id, name: m.name, price: m.price })),
-    ...(freeModels || []).filter(m => !TEXT_MODEL_OPTIONS.find(o => o.id === m.id))
-      .map(m => ({ id: m.id, name: m.name, price: 'Free' })),
-  ];
+  const optionsHtml = relevantModels.map(m =>
+    `<option value="${m.id}">${m.name} (${formatModelPrice(m)})</option>`
+  ).join('');
 
-  const optionsHtml = allOptions.map(m => `<option value="${m.id}">${m.name} (${m.price})</option>`).join('');
+  const hint = modelType === 'vision'
+    ? 'Chọn model nhận dạng ảnh / PDF để thêm:'
+    : 'Chọn model để thêm vào danh sách ưu tiên:';
 
   let html = `<div class="model-select-section">
-    <p class="model-section-hint">Chọn model để thêm vào danh sách ưu tiên:</p>
-    <select class="model-select" id="model-select-${panelKey}">
+    <p class="model-section-hint">${hint}</p>
+    <select class="model-select" id="model-select-${containerId}">
       <option value="">-- Chọn model --</option>
       ${optionsHtml}
     </select>
-    <button type="button" class="btn-add-model" data-panel="${panelKey}">+ Thêm vào danh sách</button>
+    <button type="button" class="btn-add-model" data-container="${containerId}">+ Thêm vào danh sách</button>
   </div>`;
 
   html += `<div class="model-priority-header">Danh sách ưu tiên (thử từ trên xuống):</div>`;
-  html += models.map((id, i) => `
-    <div class="model-priority-item" data-model="${id}">
-      <span class="model-priority-num">${i + 1}</span>
-      <span class="model-priority-id" title="${id}">${id}</span>
-      <button type="button" class="model-priority-remove" data-remove="${id}" title="Xóa">✕</button>
-    </div>
-  `).join('');
+  html += currentList.map((id, i) => {
+    const info = (fetchedModels || []).find(m => m.id === id);
+    const priceLabel = info ? formatModelPrice(info) : '';
+    return `
+      <div class="model-priority-item" data-model="${id}">
+        <span class="model-priority-num">${i + 1}</span>
+        <span class="model-priority-id" title="${id}">${id}</span>
+        ${priceLabel ? `<span class="model-badge ${info.free ? 'model-badge-free' : 'model-badge-paid'}">${priceLabel}</span>` : ''}
+        <button type="button" class="model-priority-remove" data-remove="${id}" title="Xóa">✕</button>
+      </div>
+    `;
+  }).join('');
 
   container.innerHTML = html;
 
+  // Event: xóa model khỏi danh sách
   container.querySelectorAll('.model-priority-remove').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.remove;
-      const list = getTextModelList().filter(m => m !== id);
+      const list = (modelType === 'vision' ? getVisionModelList() : getTextModelList()).filter(m => m !== id);
       if (list.length === 0) { showToast('Phải có ít nhất 1 model', 'error'); return; }
-      setTextModelList(list);
-      const fm = getFreeModelsSync();
-      renderTextPriorityList(panelKey, fm);
-      renderTextPriorityList(panelKey === 'upload' ? 'text' : 'upload', fm);
-      updateModelPanelSummary('upload');
-      updateModelPanelSummary('text');
+      setList(list);
+      refreshAllModelPanels();
     });
   });
 
+  // Event: thêm model vào danh sách
   const addBtn = container.querySelector('.btn-add-model');
   if (addBtn) {
     addBtn.addEventListener('click', () => {
-      const select = $(`model-select-${panelKey}`);
+      const select = $(`model-select-${containerId}`);
       const modelId = select?.value;
       if (!modelId) { showToast('Hãy chọn một model', 'error'); return; }
-      const list = getTextModelList();
+      const list = modelType === 'vision' ? getVisionModelList() : getTextModelList();
       if (list.includes(modelId)) { showToast('Model đã có trong danh sách', 'error'); return; }
       list.unshift(modelId);
-      setTextModelList(list);
-      const fm = getFreeModelsSync();
-      renderTextPriorityList('upload', fm);
-      renderTextPriorityList('text', fm);
-      updateModelPanelSummary('upload');
-      updateModelPanelSummary('text');
+      setList(list);
+      refreshAllModelPanels();
       showToast(`Đã thêm: ${modelId}`, 'success');
     });
   }
+}
+
+/** Refresh tất cả model panels (gọi sau khi thay đổi danh sách) */
+function refreshAllModelPanels() {
+  const models = getModelsSync();
+  // Vision panel (upload)
+  renderModelPriorityList('vision-priority-list', 'vision', models);
+  // Text panels (upload + text input)
+  renderModelPriorityList('text-priority-list-upload', 'text', models);
+  renderModelPriorityList('text-priority-list-text', 'text', models);
+  updateModelPanelSummary('upload');
+  updateModelPanelSummary('text');
 }
 
 function updateModelPanelSummary(panelKey) {
@@ -253,8 +250,10 @@ function updateModelPanelSummary(panelKey) {
   if (panelKey === 'upload') {
     const fileType = state.selectedFile ? detectFileType(state.selectedFile.name) : '';
     if (fileType === 'pdf' || fileType === 'image') {
-      const m = VISION_MODEL_DEFS.find(d => d.id === getVisionModel());
-      currentEl.textContent = m ? m.name : getVisionModel();
+      const list = getVisionModelList();
+      const models = getModelsSync();
+      const info = models?.find(m => m.id === list[0]);
+      currentEl.textContent = info ? info.name : list[0];
     } else {
       const list = getTextModelList();
       currentEl.textContent = list.length === 1 ? list[0] : `${list[0]} +${list.length - 1}`;
@@ -265,7 +264,7 @@ function updateModelPanelSummary(panelKey) {
   }
 }
 
-function showUploadModelPanel(fileType, freeModels = null) {
+function showUploadModelPanel(fileType, fetchedModels = null) {
   const panel = $('model-panel-upload');
   if (!panel) return;
 
@@ -274,38 +273,12 @@ function showUploadModelPanel(fileType, freeModels = null) {
   $('model-text-list-upload')?.classList.toggle('hidden', isVision);
 
   if (isVision) {
-    renderVisionRadioList();
+    renderModelPriorityList('vision-priority-list', 'vision', fetchedModels);
   } else {
-    renderTextPriorityList('upload', freeModels);
+    renderModelPriorityList('text-priority-list-upload', 'text', fetchedModels);
   }
   updateModelPanelSummary('upload');
   panel.classList.remove('hidden');
-}
-
-function setupAddModelButton(panelKey) {
-  const inputId = `text-model-add-input-${panelKey}`;
-  const btnId = `text-model-add-btn-${panelKey}`;
-  const input = $(inputId);
-  const btn = $(btnId);
-  if (!input || !btn) return;
-
-  const doAdd = () => {
-    const val = input.value.trim();
-    if (!val) return;
-    const list = getTextModelList();
-    if (list.includes(val)) { showToast('Model đã có trong danh sách', 'error'); return; }
-    list.push(val);
-    setTextModelList(list);
-    input.value = '';
-    const freeModels = getFreeModelsSync();
-    renderTextPriorityList('upload', freeModels);
-    renderTextPriorityList('text', freeModels);
-    updateModelPanelSummary('upload');
-    updateModelPanelSummary('text');
-  };
-
-  btn.addEventListener('click', doAdd);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
 }
 
 function setupModelPanelToggle(panelKey) {
@@ -418,7 +391,7 @@ async function tryBackendOCR(fileBuffer, fileName) {
     const res = await fetch('/api/ocr-openrouter', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ images, preferredModel: getVisionModel() }),
+      body: JSON.stringify({ images, modelList: getVisionModelList() }),
     });
 
     if (!res.ok) {
@@ -685,9 +658,9 @@ async function handleFileSelected(file) {
   $('btn-process-file')?.classList.remove('hidden');
   $('btn-process-file').disabled = false;
 
-  // Show model selector with free models from API
-  const freeModels = getFreeModelsSync() || (await fetchFreeModels());
-  showUploadModelPanel(fileType, freeModels);
+  // Show model selector with models from API (auto-fetch với giá live)
+  const allModels = getModelsSync() || (await fetchModels());
+  showUploadModelPanel(fileType, allModels);
 }
 
 function clearSelectedFile() {
@@ -756,23 +729,22 @@ async function processFile() {
       extractedText = text;
       setStep('step-parse', 'done');
 
-      // Gọi AI text model phân tích (free models, không cần vision)
+      // Gọi AI text model phân tích
       if (extractedText && extractedText.trim().length > 20) {
         showOcrStep(true);
         setStep('step-ocr', 'active');
         setProcessingStatus('Đang phân tích nội dung DOCX bằng AI...');
         const aiResult = await tryTextAI(extractedText);
-        if (aiResult) {
-          setStep('step-ocr', 'done');
-          setStep('step-analyze', 'done');
-          state.parsedData = aiResult.structuredData;
-          populateReviewForm(state.parsedData);
-          navigateTo('review');
-          showToast('Phân tích AI hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
-          return;
+        if (!aiResult) {
+          throw new Error('Model AI không phản hồi. Vui lòng thử lại hoặc chọn model khác.');
         }
         setStep('step-ocr', 'done');
-        setProcessingStatus('AI thất bại, dùng phân tích rule-based...');
+        setStep('step-analyze', 'done');
+        state.parsedData = aiResult.structuredData;
+        populateReviewForm(state.parsedData);
+        navigateTo('review');
+        showToast('Phân tích AI hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
+        return;
       }
 
     } else if (fileType === 'pdf') {
@@ -785,31 +757,16 @@ async function processFile() {
       setProcessingStatus('Đang nhận dạng bản tài liệu (OpenRouter AI)...');
 
       const backendResult = await tryBackendOCR(state.selectedFileBuffer, state.selectedFile.name);
-      if (backendResult) {
-        setStep('step-ocr', 'done');
-        setStep('step-analyze', 'done');
-        state.parsedData = backendResult.structuredData;
-        populateReviewForm(state.parsedData);
-        navigateTo('review');
-        showToast('Phân tích hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
-        return;
-      }
-
-      // Fallback: pdf.js text extraction (nếu MinerU thất bại)
-      setProcessingStatus('AI thất bại, thử trích xuất text PDF cơ bản...');
-      const { text, isScanned } = await parsePdf(state.selectedFileBuffer);
-
-      if (isScanned) {
-        // PDF scan không có text → Tesseract.js
-        setProcessingStatus('PDF scan, đang dùng OCR dự phòng...');
-        const { ocrPdfPages } = await import('./ocr-engine.js');
-        extractedText = await ocrPdfPages(state.selectedFileBuffer, (pct) => {
-          setProcessingStatus(`OCR dự phòng đang đọc PDF scan... ${pct}%`);
-        });
-      } else {
-        extractedText = text;
+      if (!backendResult) {
+        throw new Error('Model AI không phản hồi. Vui lòng thử lại hoặc chọn model khác.');
       }
       setStep('step-ocr', 'done');
+      setStep('step-analyze', 'done');
+      state.parsedData = backendResult.structuredData;
+      populateReviewForm(state.parsedData);
+      navigateTo('review');
+      showToast('Phân tích hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
+      return;
 
     } else if (isImage) {
       setStep('step-parse', 'done');
@@ -817,24 +774,16 @@ async function processFile() {
       setProcessingStatus('Đang nhận dạng ảnh (OpenRouter AI)...');
 
       const backendResult = await tryBackendOCR(state.selectedFileBuffer, state.selectedFile.name);
-      if (backendResult) {
-        setStep('step-ocr', 'done');
-        setStep('step-analyze', 'done');
-        state.parsedData = backendResult.structuredData;
-        populateReviewForm(state.parsedData);
-        navigateTo('review');
-        showToast('Phân tích hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
-        return;
+      if (!backendResult) {
+        throw new Error('Model AI không phản hồi. Vui lòng thử lại hoặc chọn model khác.');
       }
-
-      // Fallback: Tesseract.js
-      setProcessingStatus('AI thất bại, đang dùng OCR dự phòng...');
-      const { ocrImage } = await import('./ocr-engine.js');
-      const blob = new Blob([state.selectedFileBuffer]);
-      extractedText = await ocrImage(blob, (pct) => {
-        setProcessingStatus(`OCR dự phòng đang đọc ảnh... ${pct}%`);
-      });
       setStep('step-ocr', 'done');
+      setStep('step-analyze', 'done');
+      state.parsedData = backendResult.structuredData;
+      populateReviewForm(state.parsedData);
+      navigateTo('review');
+      showToast('Phân tích hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
+      return;
     }
 
     if (!extractedText || extractedText.trim().length < 10) {
@@ -888,29 +837,15 @@ async function processText() {
     setProcessingStatus('Đang phân tích văn bản bằng AI (OpenRouter)...');
 
     const aiResult = await tryTextAI(text);
-    if (aiResult) {
-      setStep('step-ocr', 'done');
-      setStep('step-analyze', 'done');
-      state.parsedData = aiResult.structuredData;
-      populateReviewForm(state.parsedData);
-      navigateTo('review');
-      showToast('Phân tích AI hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
-      return;
+    if (!aiResult) {
+      throw new Error('Model AI không phản hồi. Vui lòng thử lại hoặc chọn model khác.');
     }
-
-    // Fallback: rule-based parsing
     setStep('step-ocr', 'done');
-    setStep('step-analyze', 'active');
-    setProcessingStatus('AI thất bại, đang phân tích rule-based...');
-    await new Promise(r => setTimeout(r, 300));
-
-    const structuredData = parseVBHC(text);
     setStep('step-analyze', 'done');
-
-    state.parsedData = structuredData;
-    populateReviewForm(structuredData);
+    state.parsedData = aiResult.structuredData;
+    populateReviewForm(state.parsedData);
     navigateTo('review');
-    showToast('Phân tích hoàn tất (rule-based). Vui lòng kiểm tra kết quả.', 'success');
+    showToast('Phân tích AI hoàn tất. Vui lòng kiểm tra kết quả.', 'success');
 
   } catch (error) {
     console.error('Process text error:', error);
@@ -1328,14 +1263,12 @@ function initEventListeners() {
     renderNoiDungPreview(items);
   });
 
-  // Model panel toggles & add buttons
+  // Model panel toggles
   setupModelPanelToggle('upload');
   setupModelPanelToggle('text');
-  setupAddModelButton('upload');
-  setupAddModelButton('text');
   // Render text panel for text view on load
-  const freeModelsInit = getFreeModelsSync();
-  renderTextPriorityList('text', freeModelsInit);
+  const modelsInit = getModelsSync();
+  renderModelPriorityList('text-priority-list-text', 'text', modelsInit);
   updateModelPanelSummary('text');
 
   // ── Standard Selector (NĐ30 / HD36) ──
@@ -1371,8 +1304,11 @@ async function init() {
   setupTextInput();
   initEventListeners();
 
-  // Pre-fetch free models in background (non-blocking)
-  fetchFreeModels().catch(() => {});
+  // Pre-fetch models từ OpenRouter in background (non-blocking)
+  fetchModels().then(() => {
+    // Refresh panels sau khi fetch xong (nếu đã render trước đó với cache cũ)
+    refreshAllModelPanels();
+  }).catch(() => {});
 
   navigateTo('home');
 

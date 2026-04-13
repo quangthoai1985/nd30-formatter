@@ -3,57 +3,40 @@
 ## [2.1.0] — 2026-04-13
 
 ### Tổng quan
-Cập nhật tính năng chọn model AI từ danh sách trực tiếp trên giao diện, thay vì phải vào OpenRouter copy model ID.
+Nâng cấp toàn diện hệ thống quản lý model AI: hỗ trợ giá live từ OpenRouter, tối ưu hóa giao diện chọn model và loại bỏ hoàn toàn các bộ engine fallback cũ (Tesseract.js, Rule-based) để tập trung vào độ chính xác của AI.
 
 ---
 
-### Tính năng mới
+### Tính năng mới & Cải tiến
 
-#### Fetch danh sách model Free từ OpenRouter
-- Thêm endpoint `/api/models` (`functions/api/models.js`) gọi OpenRouter API `/v1/models`
-- Trả về danh sách model free, cache 5 phút trong Cloudflare KV
-- Frontend gọi API để lấy danh sách model free mới nhất
+#### Hệ thống Model Live Pricing
+- API `/api/models` hiện trả về đầy đủ danh sách model từ OpenRouter với giá live (prompt/completion price).
+- Tự động hiển thị giá trực tiếp trên giao diện chọn model để người dùng dễ dàng cân bằng giữa chi phí và chất lượng.
+- Cache danh sách model thông minh, tự động refresh khi có thay đổi từ server.
 
-#### Chọn Model Free trực tiếp trên giao diện
-- Khi upload DOCX hoặc vào trang "Nhập Text": dropdown hiển thị danh sách model free từ OpenRouter
-- User chọn model → bấm "Dùng model đã chọn" → model được thêm vào danh sách ưu tiên
-- Cache localStorage 5 phút, không block UI khi load
+#### Loại bỏ Fallback Engine cũ
+- Gỡ bỏ hoàn toàn **Tesseract.js** (OCR dự phòng cho PDF/Ảnh) và **Rule-based Parser** (Phân tích dự phòng cho Text).
+- Lý do: Các model AI hiện tại đã cực kỳ ổn định và chính xác. Việc duy trì các engine cũ gây nặng ứng dụng và có thể trả về kết quả sai lệch so với chuẩn AI.
+- Hệ thống giờ đây sẽ thông báo lỗi rõ ràng nếu AI không phản hồi, yêu cầu người dùng kiểm tra kết nối hoặc đổi model thay vì trả về kết quả kém chất lượng từ engine cũ.
 
-#### Xử lý lỗi kết nối AI
-- Khi `tryBackendOCR()` hoặc `tryTextAI()` thất bại → hiển thị Toast error trên màn hình
-- Người dùng biết ngay model nào thất bại, lý do gì
+#### Tối ưu hóa UI/UX
+- Giao diện chọn model (Model Panel) được làm lại, hiển thị thông tin rõ ràng hơn bao gồm giá và loại model.
+- Tự động ưu tiên danh sách model tốt nhất dựa trên hiệu suất thực tế thay vì chỉ ưu tiên model Free.
 
 ---
 
 ### Thay đổi kỹ thuật
 
-#### Files mới
-- `functions/api/models.js` — endpoint lấy danh sách model free từ OpenRouter
-
-#### Files chỉnh sửa chính
+#### Cấu trúc Code
 - `src/main.js`:
-  - Thêm `fetchFreeModels()`, `getFreeModelsSync()`, `setCachedFreeModels()`
-  - `renderTextPriorityList()` thêm param `freeModels` và dropdown chọn
-  - `showUploadModelPanel()` nhận `freeModels` param
-  - `init()` pre-fetch models không blocking
-  - `tryBackendOCR()`, `tryTextAI()` thêm showToast khi lỗi
-- `src/style.css`:
-  - Thêm `.model-free-section`, `.model-free-select`, `.btn-use-model`
-- `index.html`: giữ nguyên cấu trúc HTML
+  - Thay thế `fetchFreeModels` bằng `fetchModels`.
+  - Loại bỏ logic xử lý fallback trong `processFile()` và `processText()`.
+  - Cải tiến `showUploadModelPanel()` và `renderModelPriorityList()` để hỗ trợ dữ liệu metadata đầy đủ của model.
+- `functions/api/models.js`: Chỉnh sửa endpoint để lấy dữ liệu toàn diện hơn từ OpenRouter.
 
----
-
-### Bug Fix
-- Fix lỗi `await` trong function không async ở `initEventListeners()`
-- Skip fetch `/api/models` khi chạy localhost (không có Cloudflare Worker)
-
-### Khắc phục hiệu suất Model Free
-- Đổi `DEFAULT_TEXT_MODEL_LIST` từ toàn model Free → ưu tiên model trả phí rẻ và nhanh:
-  1. `google/gemini-3.1-flash-lite-preview` ($0.25/M) - nhanh, ổn định
-  2. `qwen/qwen3.5-9b` ($0.05/M) - rẻ nhất
-  3. `google/gemini-3-flash-preview` ($0.50/M) - mạnh hơn
-  4-5. Fallback model Free: `nemotron-nano`, `gemma-4-26b`
-- Lý do: Model Free của OpenRouter phản hồi rất chậm hoặc không phản hồi do queue đông, trong khi đã nạp tiền thanh toán
+#### Xử lý lỗi
+- Cải thiện luồng try/catch: Hiển thị thông báo lỗi chi tiết qua Toast khi model AI gặp sự cố.
+- Yêu cầu phản hồi AI bắt buộc cho mọi luồng xử lý văn bản.
 
 ---
 

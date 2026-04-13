@@ -1,14 +1,11 @@
 /**
- * /api/models — Fetch free models from OpenRouter API
- * Returns list of free model IDs with names for DOCX/text processing
+ * /api/models — Fetch models from OpenRouter API
+ * Returns all models with pricing info and vision capability flag.
+ * Frontend uses this to populate model selectors for both Vision (PDF/Image) and Text (DOCX/Plaintext).
  */
 
 const OPENROUTER_API = 'https://openrouter.ai/api/v1/models';
-
-const FREE_MODEL_PATTERNS = [
-  /free/i,
-  /:\s*free$/i,
-];
+const CACHE_TTL = 30 * 60 * 1000; // 30 phút
 
 export async function onRequestGet({ request, env }) {
   if (!env.OPENROUTER_API_KEY) {
@@ -40,36 +37,48 @@ export async function onRequestGet({ request, env }) {
     }
 
     const data = await response.json();
-    const models = data?.data || [];
+    const rawModels = data?.data || [];
 
-    const freeModels = models
+    const models = rawModels
       .filter(m => {
-        const id = m.id || '';
-        const context = m.context_window_size;
-        return FREE_MODEL_PATTERNS.some(p => p.test(id)) || context === null;
+        if (!m.id) return false;
+        // Phải có pricing info
+        if (!m.pricing) return false;
+        const promptPrice = parseFloat(m.pricing.prompt || '0');
+        // Loại bỏ model quá đắt (> $20/M tokens)
+        if (promptPrice > 0.00002) return false;
+        return true;
       })
-      .map(m => ({
-        id: m.id,
-        name: m.name || m.id,
-        context: m.context_window_size || null,
-      }))
+      .map(m => {
+        const promptPrice = parseFloat(m.pricing.prompt || '0');
+        const pricePerM = promptPrice * 1_000_000;
+        const modality = m.architecture?.modality || '';
+        const isFree = promptPrice === 0 || /:free$/i.test(m.id);
+        const supportsVision = /image/i.test(modality);
+
+        return {
+          id: m.id,
+          name: m.name || m.id,
+          price: isFree ? 0 : Math.round(pricePerM * 100) / 100,
+          vision: supportsVision,
+          free: isFree,
+        };
+      })
       .sort((a, b) => {
-        const aFree = isFreeModel(a.id);
-        const bFree = isFreeModel(b.id);
-        if (aFree && !bFree) return -1;
-        if (!aFree && bFree) return 1;
-        return 0;
+        // Free trước, rồi theo giá tăng dần
+        if (a.free && !b.free) return -1;
+        if (!a.free && b.free) return 1;
+        return a.price - b.price;
       });
 
     const result = {
       success: true,
-      models: freeModels,
+      models,
       cached: false,
       ts: Date.now(),
     };
 
-    await cacheModels(env, freeModels);
-
+    await cacheModels(env, models);
     return jsonResponse(result);
 
   } catch (err) {
@@ -78,17 +87,13 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-function isFreeModel(id) {
-  return /:free$/i.test(id) || /free/i.test(id);
-}
-
 async function getCachedModels(env) {
   try {
-    const cached = await env.ND30_MODELS_CACHE?.get('free_models');
+    const cached = await env.ND30_MODELS_CACHE?.get('all_models');
     if (!cached) return null;
     const parsed = JSON.parse(cached);
     const age = Date.now() - (parsed.ts || 0);
-    if (age > 5 * 60 * 1000) return null;
+    if (age > CACHE_TTL) return null;
     return parsed;
   } catch { return null; }
 }
@@ -96,7 +101,7 @@ async function getCachedModels(env) {
 async function cacheModels(env, models) {
   try {
     if (env.ND30_MODELS_CACHE) {
-      await env.ND30_MODELS_CACHE.put('free_models', JSON.stringify({
+      await env.ND30_MODELS_CACHE.put('all_models', JSON.stringify({
         models,
         ts: Date.now(),
       }));

@@ -121,19 +121,13 @@ export async function onRequestPost({ request, env }) {
 
     // Dùng model list từ frontend nếu có, fallback về default
     let modelList;
-    if (isTextMode) {
-      modelList = (Array.isArray(body.modelList) && body.modelList.length > 0)
-        ? body.modelList
-        : TEXT_MODELS;
+    if (Array.isArray(body.modelList) && body.modelList.length > 0) {
+      // Frontend gửi danh sách ưu tiên (dùng cho cả vision và text)
+      modelList = body.modelList;
+    } else if (isTextMode) {
+      modelList = TEXT_MODELS;
     } else {
-      // Vision mode: ưu tiên preferredModel từ frontend
-      const preferred = typeof body.preferredModel === 'string' ? body.preferredModel.trim() : '';
-      if (preferred) {
-        const rest = VISION_MODELS.filter(m => m !== preferred);
-        modelList = [preferred, ...rest];
-      } else {
-        modelList = VISION_MODELS;
-      }
+      modelList = VISION_MODELS;
     }
 
     // Thử lần lượt từng model
