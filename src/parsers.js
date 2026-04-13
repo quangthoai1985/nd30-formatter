@@ -32,11 +32,19 @@ export async function parsePdf(arrayBuffer) {
   try {
     // Dynamically import pdfjs-dist (lazy load)
     const pdfjsLib = await import('pdfjs-dist');
+    const PDFJS_CDN = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}`;
 
     // Set worker source
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/build/pdf.worker.min.mjs`;
 
-    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    const doc = await pdfjsLib.getDocument({
+      data: new Uint8Array(arrayBuffer),
+      cMapUrl: `${PDFJS_CDN}/cmaps/`,
+      cMapPacked: true,
+      standardFontDataUrl: `${PDFJS_CDN}/standard_fonts/`,
+      wasmUrl: `${PDFJS_CDN}/wasm/`,
+      isEvalSupported: false,
+    }).promise;
     const pages = [];
 
     for (let i = 1; i <= doc.numPages; i++) {

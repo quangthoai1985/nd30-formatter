@@ -379,30 +379,46 @@ function mergeExtracted(aiResult, ruleResult) {
  */
 async function pdfToBase64Images(fileBuffer) {
   const pdfjsLib = await import('pdfjs-dist');
+  const PDFJS_CDN = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}`;
 
-  // Cấu hình worker cho pdfjs (cùng URL với parsers.js)
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  // Cấu hình worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/build/pdf.worker.min.mjs`;
 
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(fileBuffer) }).promise;
+  // Mở PDF với đầy đủ cấu hình: CMap (font CJK), WASM (JPEG2000/JBIG2), Standard Fonts
+  const pdf = await pdfjsLib.getDocument({
+    data: new Uint8Array(fileBuffer),
+    cMapUrl: `${PDFJS_CDN}/cmaps/`,
+    cMapPacked: true,
+    standardFontDataUrl: `${PDFJS_CDN}/standard_fonts/`,
+    wasmUrl: `${PDFJS_CDN}/wasm/`,
+    isEvalSupported: false,
+  }).promise;
+
   const images = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
-    const scale = 2; // 2x cho chất lượng OCR tốt
+
+    // Scale 3x (~216 DPI) cho chất lượng OCR tốt — đủ sắc nét cho AI nhận dạng
+    const scale = 3;
     const viewport = page.getViewport({ scale });
 
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
+    const ctx = canvas.getContext('2d');
+    // Nền trắng (tránh PDF có alpha → nền đen)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     await page.render({
-      canvasContext: canvas.getContext('2d'),
+      canvasContext: ctx,
       viewport,
     }).promise;
 
-    // Chuyển canvas → base64 PNG (data URL)
-    images.push(canvas.toDataURL('image/png'));
+    // JPEG quality 0.92 — nhẹ hơn PNG ~3-5x, đủ nét cho OCR
+    images.push(canvas.toDataURL('image/jpeg', 0.92));
   }
 
   return images;

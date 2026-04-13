@@ -17,6 +17,12 @@ Nâng cấp trải nghiệm người dùng với tính năng tìm kiếm model t
 - **Tối ưu hóa Grid**: Chuyển đổi các lưới 6 cột chật chội sang lưới 2 hoặc 3 cột thông thoáng, đảm bảo hiển thị đẹp trên mọi kích thước màn hình laptop.
 - **Khoảng cách & Trực quan**: Tăng cường padding và khoảng cách giữa các phần tử để giảm bớt sự choáng ngợp khi thao tác với văn bản dài.
 
+#### Sửa lỗi & Tối ưu hóa PDF (Core)
+- **Sửa lỗi JPEG2000 (JPX)**: Cấu hình đầy đủ WASM, CMap và Standard Fonts cho PDF.js, giải quyết triệt để lỗi không hiển thị hình ảnh nén JPEG2000 trong file PDF.
+- **Tăng cường chất lượng OCR**: Nâng tỷ lệ render từ 2x lên 3x (~216 DPI), đảm bảo độ sắc nét cao nhất cho AI nhận diện văn bản.
+- **Tối ưu dung lượng**: Chuyển đổi định dạng ảnh tạm thời từ PNG sang JPEG (quality 0.92), giúp giảm dung lượng bộ nhớ từ 3-5 lần mà vẫn giữ nguyên hiệu quả nhận dạng.
+- **Xử lý Alpha Channel**: Tự động chèn nền trắng khi render canvas, tránh hiện tượng nền bị đen trên một số file PDF đặc thù.
+
 #### Logic Thể thức Văn bản (NĐ30/HD36)
 - **Thông minh hóa trường Chức danh ban hành**: Tự động ẩn/hiện mục "Chức danh ban hành" chuẩn xác theo từng loại văn bản (Hiện với Quyết định/Nghị quyết, ẩn với Công văn/Tờ trình/Báo cáo).
 - **Cập nhật Schema**: Bổ sung cờ điều hướng hiển thị `showChucDanhBanHanh` cho toàn bộ hệ thống schema hành chính và Đảng.
